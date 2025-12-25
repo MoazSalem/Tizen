@@ -104,10 +104,7 @@ Your session is saved securely and will reconnect automatically.
 ### Installation Instructions
 
 1. Enable Developer Mode on your Samsung TV. See [Enable Developer Mode on the TV](https://developer.samsung.com/smarttv/develop/getting-started/using-sdk/tv-device.html#Connecting-the-TV-and-SDK)
-2. Connect to your TV using Tizen Studio Device Manager or sdb
-3. Install the WGT package using Tizen Studio or command line
-
-_For detailed installation steps, see the [Wiki](https://github.com/Moonfin-Client/jellyfin-tizen/wiki)._
+2. Use the amazing tool [Jellyfin 2 Samsung](https://github.com/PatrickSt1991/Samsung-Jellyfin-Installer) by @PatrickSt1991
 
 ## Building from Source
 
