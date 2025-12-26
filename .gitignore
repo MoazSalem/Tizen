@@ -1,4 +1,27 @@
+# Build outputs
+build/
 *.wgt
-www
-.*
-node_modules
+www/
+
+# Dependencies
+node_modules/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Tizen specific
+.tproject
+.project.bak
+Debug/
+
+# Logs
+*.log
+npm-debug.log*
