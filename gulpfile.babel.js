@@ -1,9 +1,11 @@
 import gulp from "gulp";
 import { deleteAsync as del } from "del";
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync, writeFileSync, createWriteStream, copyFileSync, existsSync } from "fs";
 import { exec } from "child_process";
 import { promisify } from "util";
 import babel from "gulp-babel";
+import archiver from "archiver";
+import path from "path";
 
 const execAsync = promisify(exec);
 
@@ -84,27 +86,51 @@ async function packageWgt() {
    await del([versionedWgtName, wgtName]);
 
    try {
-      await execAsync(
-         "cp -f .sign/author-signature.xml .sign/signature1.xml build/ 2>/dev/null || true"
-      );
-      console.info("Added signature files to build directory");
+      const signatureFiles = [
+         { src: ".sign/author-signature.xml", dest: "build/author-signature.xml" },
+         { src: ".sign/signature1.xml", dest: "build/signature1.xml" }
+      ];
+      
+      let copied = false;
+      for (const file of signatureFiles) {
+         if (existsSync(file.src)) {
+            copyFileSync(file.src, file.dest);
+            copied = true;
+         }
+      }
+      
+      if (copied) {
+         console.info("Added signature files to build directory");
+      } else {
+         console.warn("Warning: No signature files found - package may not install on device");
+      }
    } catch (e) {
-      console.warn(
-         "Warning: No signature files found - package may not install on device"
-      );
+      console.warn("Warning: Failed to copy signature files:", e.message);
+   }
+
+   async function createZip(outputPath) {
+      return new Promise((resolve, reject) => {
+         const output = createWriteStream(outputPath);
+         const archive = archiver("zip", { zlib: { level: 9 } });
+
+         output.on("close", () => {
+            console.info(`Package created: ${path.basename(outputPath)} (${archive.pointer()} bytes)`);
+            resolve();
+         });
+
+         archive.on("error", (err) => reject(err));
+
+         archive.pipe(output);
+         archive.directory("build/", false);
+         archive.finalize();
+      });
    }
 
    console.info(`Creating ${wgtName}...`);
-   await execAsync(
-      `cd build && zip -r ../${wgtName} . -x "*.git*" -x "gulpfile.babel.js"`
-   );
-   console.info(`Package created: ${wgtName}`);
+   await createZip(wgtName);
 
    console.info(`Creating ${versionedWgtName}...`);
-   await execAsync(
-      `cd build && zip -r ../${versionedWgtName} . -x "*.git*" -x "gulpfile.babel.js"`
-   );
-   console.info(`Package created: ${versionedWgtName}`);
+   await createZip(versionedWgtName);
 }
 
 const build = gulp.series(clean, updateVersion, copyFiles);
