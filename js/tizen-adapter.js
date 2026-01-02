@@ -427,9 +427,7 @@
                Conditions: [
                   { Condition: 'EqualsAny', Property: 'VideoProfile', Value: 'high|main|baseline|constrained baseline', IsRequired: false },
                   { Condition: 'EqualsAny', Property: 'VideoRangeType', Value: 'SDR', IsRequired: false },
-                  { Condition: 'LessThanEqual', Property: 'VideoLevel', Value: tizenVersion >= 5 ? '52' : '51', IsRequired: false },
-                  { Condition: 'NotEquals', Property: 'IsAnamorphic', Value: 'true', IsRequired: false },
-                  { Condition: 'NotEquals', Property: 'IsInterlaced', Value: 'true', IsRequired: false }
+                  { Condition: 'LessThanEqual', Property: 'VideoLevel', Value: tizenVersion >= 5 ? '52' : '51', IsRequired: false }
                ]
             },
             // HEVC codec profile
@@ -440,9 +438,7 @@
                   { Condition: 'EqualsAny', Property: 'VideoProfile', Value: 'main|main 10', IsRequired: false },
                   // Tizen 3+ supports HDR10, HLG, and can play DV fallback
                   { Condition: 'EqualsAny', Property: 'VideoRangeType', Value: tizenVersion >= 3 ? 'SDR|HDR10|HDR10Plus|HLG|DOVIWithSDR|DOVIWithHDR10' : 'SDR', IsRequired: false },
-                  { Condition: 'LessThanEqual', Property: 'VideoLevel', Value: '183', IsRequired: false },
-                  { Condition: 'NotEquals', Property: 'IsAnamorphic', Value: 'true', IsRequired: false },
-                  { Condition: 'NotEquals', Property: 'IsInterlaced', Value: 'true', IsRequired: false }
+                  { Condition: 'LessThanEqual', Property: 'VideoLevel', Value: '183', IsRequired: false }
                ]
             },
             // AV1 codec profile (Tizen 5.5+ / 2021 TVs)
