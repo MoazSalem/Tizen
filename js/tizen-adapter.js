@@ -373,10 +373,11 @@
          TranscodingProfiles: [
             // HLS video transcoding - fMP4 (Tizen 5+)
             // H.264 first for maximum compatibility
+            // NOTE: EAC3 removed - Tizen cannot play EAC3 in HLS fmp4 via HLS.js
             {
                Container: 'mp4',
                Type: 'Video',
-               AudioCodec: 'aac,mp3,ac3,eac3,opus',
+               AudioCodec: 'aac,mp3,ac3,opus',
                VideoCodec: 'h264',
                Context: 'Streaming',
                Protocol: 'hls',
@@ -385,10 +386,11 @@
                BreakOnNonKeyFrames: true
             },
             // HLS video transcoding - TS
+            // NOTE: EAC3 removed - Tizen cannot play EAC3 in HLS via HLS.js
             {
                Container: 'ts',
                Type: 'Video',
-               AudioCodec: 'aac,mp3,ac3,eac3,opus',
+               AudioCodec: 'aac,mp3,ac3,opus',
                VideoCodec: 'h264',
                Context: 'Streaming',
                Protocol: 'hls',
