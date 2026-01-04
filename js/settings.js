@@ -294,6 +294,12 @@ var SettingsController = (function () {
 
       // Update platform information in About section
       updatePlatformInfo();
+      
+      // Update app version in About section
+      var appVersionValue = document.getElementById("appVersionValue");
+      if (appVersionValue) {
+         appVersionValue.textContent = typeof APP_VERSION !== "undefined" ? APP_VERSION : "1.0.0";
+      }
    }
 
    /**
