@@ -694,6 +694,14 @@ var PlayerController = (function () {
                   (currentFocusIndex - 1 + focusableButtons.length) %
                   focusableButtons.length;
                focusableButtons[currentFocusIndex].focus();
+            } else {
+               // Fallback: Show controls, focus seekbar, and seek
+               evt.preventDefault();
+               showControls();
+               if (elements.progressBar) {
+                  elements.progressBar.focus();
+                  seekBackward();
+               }
             }
             break;
 
@@ -710,6 +718,14 @@ var PlayerController = (function () {
                currentFocusIndex =
                   (currentFocusIndex + 1) % focusableButtons.length;
                focusableButtons[currentFocusIndex].focus();
+            } else {
+               // Fallback: Show controls, focus seekbar, and seek
+               evt.preventDefault();
+               showControls();
+               if (elements.progressBar) {
+                  elements.progressBar.focus();
+                  seekForward();
+               }
             }
             break;
       }
@@ -2521,6 +2537,15 @@ var PlayerController = (function () {
     * Hide player controls
     */
    function hideControls() {
+      // Clear focus if a control button is focused
+      if (
+         document.activeElement &&
+         focusableButtons &&
+         focusableButtons.includes(document.activeElement)
+      ) {
+         document.activeElement.blur();
+      }
+
       if (elements.playerControls) {
          elements.playerControls.classList.remove("visible");
       }
