@@ -1116,15 +1116,24 @@ class TizenVideoAdapter extends VideoPlayerAdapter {
         }
     }
 
-    selectAudioTrack(trackId) {
+    selectAudioTrack(trackIndex) {
         try {
             const totalTracks = webapis.avplay.getTotalTrackInfo();
+            let audioCount = 0;
+
+            if (window.debugOverlay) window.debugOverlay.log('[TizenAdapter] selecting Audio Index: ' + trackIndex);
+
             for (let i = 0; i < totalTracks.length; i++) {
-                if (totalTracks[i].type === 'AUDIO' && totalTracks[i].index === trackId) {
-                    webapis.avplay.setSelectTrack('AUDIO', trackId);
-                    return true;
+                if (totalTracks[i].type === 'AUDIO') {
+                    if (audioCount === trackIndex) {
+                        if (window.debugOverlay) window.debugOverlay.log('[TizenAdapter] Found matching track ID: ' + totalTracks[i].index);
+                        webapis.avplay.setSelectTrack('AUDIO', totalTracks[i].index);
+                        return true;
+                    }
+                    audioCount++;
                 }
             }
+            console.warn('[TizenAdapter] Audio track not found for index:', trackIndex);
             return false;
         } catch (error) {
             console.error('[TizenAdapter] Audio track selection error:', error);
