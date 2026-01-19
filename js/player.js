@@ -1558,8 +1558,11 @@ var PlayerController = (function () {
             isDirectPlay: useDirectPlay,
             isHEVC: isHEVC,
             isHEVC10bit: isHEVC10bit,
+            isHEVC10bit: isHEVC10bit,
             isDolbyVision: isDolbyVision,
-            mediaSource: mediaSource
+            mediaSource: mediaSource,
+            item: itemData, // Pass item data for SubtitleManager
+            auth: auth // Pass auth data for SubtitleManager
          })
          .then(function () {
             clearLoadingTimeout();
@@ -3345,6 +3348,15 @@ var PlayerController = (function () {
          try {
             // For subtitles, -1 means disable, otherwise use the array index
             var adapterIndex = index;
+
+            // [FIX] For TizenAVPlay, we need the actual Stream Index
+            if (index >= 0 && playerAdapter && playerAdapter.getName() === 'TizenAVPlay') {
+               if (index < subtitleStreams.length) {
+                  adapterIndex = subtitleStreams[index].Index;
+                  console.log('[Player] TizenAVPlay detected, using StreamIndex:', adapterIndex);
+                  if (window.debugOverlay) window.debugOverlay.log('Player selecting Tizen track: ' + adapterIndex);
+               }
+            }
 
             // If using Shaka adapter and not disabling, map to unique subtitle tracks
             if (

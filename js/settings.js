@@ -339,6 +339,11 @@ var SettingsController = (function () {
          backdropBlurHome: 3,
          backdropBlurDetail: 3,
          serverLogging: true,
+         // Subtitle defaults
+         subtitleSize: "medium",
+         subtitleColor: "#ffffff",
+         subtitlePosition: "bottom",
+         subtitleBackground: "drop-shadow",
       };
 
       for (var key in defaults) {
@@ -577,6 +582,29 @@ var SettingsController = (function () {
       var serverLoggingValue = document.getElementById("serverLoggingValue");
       if (serverLoggingValue) {
          serverLoggingValue.textContent = settings.serverLogging ? "On" : "Off";
+      }
+
+      // Subtitle Customization
+      var subtitleSizeValue = document.getElementById("subtitleSizeValue");
+      if (subtitleSizeValue) {
+         subtitleSizeValue.textContent = (settings.subtitleSize || "medium").charAt(0).toUpperCase() + (settings.subtitleSize || "medium").slice(1);
+      }
+
+      var subtitleColorValue = document.getElementById("subtitleColorValue");
+      if (subtitleColorValue) {
+         var colorMap = { "#ffffff": "White", "#ffff00": "Yellow", "#000000": "Black", "#00ffff": "Cyan", "#0000ff": "Blue" };
+         subtitleColorValue.textContent = colorMap[settings.subtitleColor] || "White";
+      }
+
+      var subtitlePositionValue = document.getElementById("subtitlePositionValue");
+      if (subtitlePositionValue) {
+         subtitlePositionValue.textContent = (settings.subtitlePosition || "bottom").charAt(0).toUpperCase() + (settings.subtitlePosition || "bottom").slice(1);
+      }
+
+      var subtitleBackgroundValue = document.getElementById("subtitleBackgroundValue");
+      if (subtitleBackgroundValue) {
+         var bgMap = { "none": "None", "drop-shadow": "Drop Shadow", "background": "Opaque Box" };
+         subtitleBackgroundValue.textContent = bgMap[settings.subtitleBackground] || "Drop Shadow";
       }
 
       // Jellyseerr settings
@@ -1494,6 +1522,40 @@ var SettingsController = (function () {
 
          case "logout":
             handleLogout();
+            break;
+
+         case "logout":
+            handleLogout();
+            break;
+
+         case "subtitleSize":
+            var sizes = ["smaller", "small", "medium", "large", "extralarge"];
+            var currentSizeIdx = sizes.indexOf(settings.subtitleSize || "medium");
+            settings.subtitleSize = sizes[(currentSizeIdx + 1) % sizes.length];
+            saveSettings();
+            updateSettingValues();
+            break;
+
+         case "subtitleColor":
+            var colors = ["#ffffff", "#ffff00", "#000000", "#00ffff", "#0000ff"];
+            var currentColorIdx = colors.indexOf(settings.subtitleColor || "#ffffff");
+            settings.subtitleColor = colors[(currentColorIdx + 1) % colors.length];
+            saveSettings();
+            updateSettingValues();
+            break;
+
+         case "subtitlePosition":
+            settings.subtitlePosition = (settings.subtitlePosition === "bottom" || !settings.subtitlePosition) ? "top" : "bottom";
+            saveSettings();
+            updateSettingValues();
+            break;
+
+         case "subtitleBackground":
+            var bgs = ["none", "drop-shadow", "background"];
+            var currentBgIdx = bgs.indexOf(settings.subtitleBackground || "drop-shadow");
+            settings.subtitleBackground = bgs[(currentBgIdx + 1) % bgs.length];
+            saveSettings();
+            updateSettingValues();
             break;
 
          case "manageServers":
