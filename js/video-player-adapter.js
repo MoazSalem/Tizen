@@ -801,6 +801,8 @@ class TizenVideoAdapter extends VideoPlayerAdapter {
             throw new Error('Tizen AVPlay API not initialized');
         }
 
+        this.options = options;
+
         // Initialize SubtitleManager if available
         // Initialize SubtitleManager if available
         if (typeof SubtitleManager !== 'undefined') {
@@ -903,6 +905,14 @@ class TizenVideoAdapter extends VideoPlayerAdapter {
                 onbufferingcomplete: () => {
                     console.log('[TizenAdapter] Buffering complete');
                     this.emit('buffering', false);
+
+                    // Retry pending track selection if needed
+                    if (this.pendingAudioIndex !== undefined && this.pendingAudioIndex !== -1) {
+                        console.log('[TizenAdapter] Retrying pending audio selection after buffering:', this.pendingAudioIndex);
+                        if (this.selectAudioTrack(this.pendingAudioIndex)) {
+                            this.pendingAudioIndex = -1;
+                        }
+                    }
                 },
                 onstreamcompleted: () => {
                     console.log('[TizenAdapter] Stream completed');
@@ -927,6 +937,13 @@ class TizenVideoAdapter extends VideoPlayerAdapter {
                     }
 
                     this.emit('timeupdate', { currentTime: timeInSeconds });
+
+                    // Final safety check: if we started playing and still have a pending track, try one last time
+                    if (this.pendingAudioIndex !== undefined && this.pendingAudioIndex !== -1 && currentTime > 0) {
+                        if (this.selectAudioTrack(this.pendingAudioIndex)) {
+                            this.pendingAudioIndex = -1;
+                        }
+                    }
                 },
                 onerror: (errorType) => {
                     // Get detailed error info for debugging
@@ -1022,6 +1039,22 @@ class TizenVideoAdapter extends VideoPlayerAdapter {
                             // Trigger loadedmetadata for UI initialization
                             this.videoElement.dispatchEvent(new Event('loadedmetadata'));
                         }
+
+                        // Apply initial track preferences if provided
+                        if (this.options) {
+                            if (typeof this.options.initialAudioIndex === 'number' && this.options.initialAudioIndex >= 0) {
+                                console.log('[TizenAdapter] Applying initial audio track preference:', this.options.initialAudioIndex);
+                                if (!this.selectAudioTrack(this.options.initialAudioIndex)) {
+                                    console.log('[TizenAdapter] Selection failed/deferred, storing as pending');
+                                    this.pendingAudioIndex = this.options.initialAudioIndex;
+                                }
+                            }
+                            if (typeof this.options.initialSubtitleIndex === 'number') {
+                                console.log('[TizenAdapter] Applying initial subtitle track preference:', this.options.initialSubtitleIndex);
+                                this.selectSubtitleTrack(this.options.initialSubtitleIndex);
+                            }
+                        }
+
                         resolve();
                     },
                     (error) => {
@@ -1038,6 +1071,15 @@ class TizenVideoAdapter extends VideoPlayerAdapter {
     play() {
         try {
             console.log('[TizenAdapter] Calling play()');
+
+            // Try pending audio selection before playing
+            if (this.pendingAudioIndex !== undefined && this.pendingAudioIndex !== -1) {
+                console.log('[TizenAdapter] Retrying pending audio selection before play:', this.pendingAudioIndex);
+                if (this.selectAudioTrack(this.pendingAudioIndex)) {
+                    this.pendingAudioIndex = -1;
+                }
+            }
+
             webapis.avplay.play();
 
             // Log state after play

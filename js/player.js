@@ -1236,6 +1236,18 @@ var PlayerController = (function () {
       // Check for user-selected track preferences from details page
       if (!isLiveTV) {
          try {
+            var savedAudio = localStorage.getItem("preferredAudioTrack_" + itemData.Id);
+            if (savedAudio !== null) {
+               var parsedAudio = parseInt(savedAudio);
+               if (!isNaN(parsedAudio)) {
+                  // Verify index exists
+                  if (parsedAudio >= 0 && parsedAudio < audioStreams.length) {
+                     currentAudioIndex = parsedAudio;
+                     console.log("[Player] Restored saved audio preference:", currentAudioIndex);
+                  }
+               }
+            }
+
             var savedSub = localStorage.getItem("preferredSubtitleTrack_" + itemData.Id);
             if (savedSub !== null) {
                var parsedSub = parseInt(savedSub);
@@ -1248,7 +1260,7 @@ var PlayerController = (function () {
                }
             }
          } catch (e) {
-            console.warn("[Player] Failed to load subtitle preference:", e);
+            console.warn("[Player] Failed to load track preferences:", e);
          }
       }
 
@@ -1581,7 +1593,9 @@ var PlayerController = (function () {
             isDolbyVision: isDolbyVision,
             mediaSource: mediaSource,
             item: itemData, // Pass item data for SubtitleManager
-            auth: auth // Pass auth data for SubtitleManager
+            auth: auth, // Pass auth data for SubtitleManager
+            initialAudioIndex: currentAudioIndex, // Pass user preference
+            initialSubtitleIndex: currentSubtitleIndex
          })
          .then(function () {
             clearLoadingTimeout();
@@ -2722,14 +2736,13 @@ var PlayerController = (function () {
             });
          }
 
-         // If no track is enabled, enable the user-selected or default track
+         // Check if we need to enforce a specific audio track (e.g. from user preference)
+         // Audio track selection is handled by PlayerAdapter.load()
+         // We only enforce fallback if completely nothing is enabled
          if (!hasEnabledTrack && videoPlayer.audioTracks.length > 0) {
-            // Use currentAudioIndex if valid, otherwise fall back to first track
-            var trackToEnable = currentAudioIndex >= 0 && currentAudioIndex < videoPlayer.audioTracks.length
-               ? currentAudioIndex
-               : 0;
-            console.log("[Player] No audio track enabled, enabling track index:", trackToEnable);
-            videoPlayer.audioTracks[trackToEnable].enabled = true;
+            // Fallback: If nothing enabled, enable track 0
+            console.log("[Player] No audio track enabled, enabling track 0");
+            videoPlayer.audioTracks[0].enabled = true;
          }
       } else {
          console.log("[Player] No audio tracks exposed via DOM API (embedded audio stream)");
