@@ -345,6 +345,7 @@ var SettingsController = (function () {
          subtitleSize: "medium",
          subtitleColor: "#ffffff",
          subtitlePosition: "bottom",
+         subtitlePositionAbsolute: 90,
          subtitleBackground: "drop-shadow",
          subtitleOpacity: 100,
       };
@@ -610,7 +611,24 @@ var SettingsController = (function () {
          var displayPos = pos.charAt(0).toUpperCase() + pos.slice(1);
          if (pos === "bottom-low") displayPos = "Bottom (Low)";
          if (pos === "bottom-high") displayPos = "Bottom (High)";
+         if (pos === "bottom-extra-low") displayPos = "Bottom (Extra Low)";
+         if (pos === "absolute") displayPos = "Absolute";
          subtitlePositionValue.textContent = displayPos;
+
+         // Toggle visibility of absolute position slider
+         var absItem = document.getElementById("subtitlePositionAbsoluteItem");
+         if (absItem) {
+            if (pos === "absolute") {
+               absItem.style.display = "flex";
+            } else {
+               absItem.style.display = "none";
+            }
+         }
+      }
+
+      var subtitlePositionAbsoluteValue = document.getElementById("subtitlePositionAbsoluteValue");
+      if (subtitlePositionAbsoluteValue) {
+         subtitlePositionAbsoluteValue.textContent = (settings.subtitlePositionAbsolute || 90) + "%";
       }
 
 
@@ -680,11 +698,24 @@ var SettingsController = (function () {
       if (pos === 'top') {
          previewContainer.style.bottom = 'auto';
          previewContainer.style.top = '10px';
+         previewContainer.style.transform = 'none';
       } else if (pos === 'middle') {
          previewContainer.style.bottom = '50%';
          previewContainer.style.top = 'auto';
          previewContainer.style.transform = 'translateY(50%)';
-      } else {
+      } else if (pos === 'bottom-extra-low') {
+         previewContainer.style.bottom = '0px'; // Very low
+         previewContainer.style.top = 'auto';
+         previewContainer.style.transform = 'none';
+      } else if (pos === 'absolute') {
+         // Approximate absolute by using top % in the small box
+         var absTop = settings.subtitlePositionAbsolute !== undefined ? settings.subtitlePositionAbsolute : 90;
+         previewContainer.style.position = 'absolute';
+         previewContainer.style.top = absTop + '%';
+         previewContainer.style.bottom = 'auto';
+         previewContainer.style.transform = 'none';
+      } else { // bottom, bottom-low, bottom-high
+         previewContainer.style.position = 'absolute';
          previewContainer.style.bottom = '10px';
          previewContainer.style.top = 'auto';
          previewContainer.style.transform = 'none';
@@ -1168,6 +1199,12 @@ var SettingsController = (function () {
     * @private
     */
    function handleContentNavigation(evt) {
+      // If in absolute slider mode, handle it specifically
+      if (focusManager.inAbsoluteSliderMode) {
+         handleAbsoluteSliderNavigation(evt);
+         return;
+      }
+
       // If in slider mode, handle slider navigation
       if (focusManager.inSliderMode) {
          handleSliderNavigation(evt);
@@ -1475,13 +1512,17 @@ var SettingsController = (function () {
             break;
 
          case "subtitlePosition":
-            var positions = ["bottom", "bottom-low", "bottom-high", "top", "middle"];
+            var positions = ["bottom", "bottom-low", "bottom-extra-low", "bottom-high", "top", "middle", "absolute"];
             var currentPosIndex = positions.indexOf(settings.subtitlePosition || "bottom");
             var nextPosIndex = (currentPosIndex + 1) % positions.length;
             settings.subtitlePosition = positions[nextPosIndex];
             saveSettings();
             updateSettingValues();
             updateSubtitlePreview();
+            break;
+
+         case "subtitlePositionAbsolute":
+            enterAbsoluteSliderMode(settings.subtitlePositionAbsolute || 90);
             break;
 
          case "subtitleBackground":
@@ -2350,12 +2391,13 @@ var SettingsController = (function () {
    }
 
    /**
-    * Enter slider mode for blur settings
+    * Enter slider mode for settings
     * @param {string} settingName - The setting name
     * @param {number} currentValue - The current value
     * @private
     */
    function enterSliderMode(settingName, currentValue) {
+      console.log('[Settings] enterSliderMode Name:', settingName, 'Value:', currentValue);
       focusManager.inSliderMode = true;
       focusManager.sliderSetting = settingName;
 
@@ -2365,7 +2407,13 @@ var SettingsController = (function () {
       if (!settingItem) return;
 
       // Initialize slider with current value
-      var percentage = (currentValue / 5) * 100;
+      var percentage = 0;
+      if (settingName === "subtitlePositionAbsolute") {
+         percentage = currentValue; // Already 0-100
+      } else {
+         percentage = (currentValue / 5) * 100; // 0-5 mapping
+      }
+
       var fillElement = settingItem.querySelector(".slider-fill");
       var sliderValueDisplay = settingItem.querySelector(
          ".slider-value-display"
@@ -2375,7 +2423,7 @@ var SettingsController = (function () {
          fillElement.style.width = percentage + "%";
       }
       if (sliderValueDisplay) {
-         sliderValueDisplay.textContent = currentValue;
+         sliderValueDisplay.textContent = currentValue + (settingName === "subtitlePositionAbsolute" ? "%" : "");
       }
 
       // Hide the value display, show the slider
@@ -2398,15 +2446,18 @@ var SettingsController = (function () {
       focusManager.inSliderMode = false;
       focusManager.sliderSetting = null;
 
-      // Update the setting based on which blur control
+      // Update the setting based on which control
       if (settingName === "backdrop-blur-home") {
          settings.backdropBlurHome = newValue;
       } else if (settingName === "backdrop-blur-detail") {
          settings.backdropBlurDetail = newValue;
+      } else if (settingName === "subtitlePositionAbsolute") {
+         settings.subtitlePositionAbsolute = newValue;
       }
 
       saveSettings();
       updateSettingValues();
+      updateSubtitlePreview(); // Update preview for subtitles
 
       var settingItem = document.querySelector(
          '[data-setting="' + settingName + '"]'
@@ -2424,67 +2475,216 @@ var SettingsController = (function () {
    }
 
    /**
+    * Update slider display during navigation
+    * @param {string} settingName 
+    * @param {number} value 
+    */
+   function updateSliderDisplay(settingName, value) {
+      // Ensure value is a number
+      value = parseInt(value);
+
+      // Update in-memory setting for live preview
+      if (settingName === "subtitlePositionAbsolute") {
+         settings.subtitlePositionAbsolute = value;
+         updateSubtitlePreview();
+      } else if (settingName === "backdrop-blur-home") {
+         settings.backdropBlurHome = value;
+      } else if (settingName === "backdrop-blur-detail") {
+         settings.backdropBlurDetail = value;
+      }
+
+      var settingItem = document.querySelector('[data-setting="' + settingName + '"]');
+      if (!settingItem) return;
+
+      var percentage = 0;
+      if (settingName === "subtitlePositionAbsolute") {
+         percentage = value; // 0-100 maps directly to percentage
+      } else {
+         percentage = (value / 5) * 100; // 0-5 maps to 0-100%
+      }
+
+      var fillElement = settingItem.querySelector(".slider-fill");
+      var sliderValueDisplay = settingItem.querySelector(".slider-value-display");
+
+      if (fillElement) {
+         fillElement.style.width = percentage + "%";
+      }
+      if (sliderValueDisplay) {
+         sliderValueDisplay.textContent = value + (settingName === "subtitlePositionAbsolute" ? "%" : "");
+      }
+   }
+
+   /**
     * Handle navigation within slider mode
     * @param {KeyboardEvent} evt - Keyboard event
     * @private
     */
    function handleSliderNavigation(evt) {
       var settingName = focusManager.sliderSetting;
-      var currentValue =
-         settingName === "backdrop-blur-home"
-            ? settings.backdropBlurHome
-            : settings.backdropBlurDetail;
+      if (!settingName) return;
+
+      // Get current value and constraints based on setting type
+      var currentValue, max, step;
+
+      if (settingName === "subtitlePositionAbsolute") {
+         currentValue = parseInt(settings.subtitlePositionAbsolute) || 90;
+         max = 100;
+         step = 1;
+      } else if (settingName === "backdrop-blur-home") {
+         currentValue = parseInt(settings.backdropBlurHome) || 0;
+         max = 5;
+         step = 1;
+      } else if (settingName === "backdrop-blur-detail") {
+         currentValue = parseInt(settings.backdropBlurDetail) || 0;
+         max = 5;
+         step = 1;
+      } else {
+         return;
+      }
+
+      var newValue = currentValue;
+      var handled = false;
 
       switch (evt.keyCode) {
-         case KeyCodes.LEFT: // Left - decrease value
+         case KeyCodes.LEFT:
             evt.preventDefault();
-            if (currentValue > 0) {
-               var newValue = Math.max(0, currentValue - 1);
-               updateSliderDisplay(settingName, newValue);
-            }
+            newValue = Math.max(0, currentValue - step);
+            handled = true;
             break;
 
-         case KeyCodes.RIGHT: // Right - increase value
+         case KeyCodes.RIGHT:
             evt.preventDefault();
-            if (currentValue < 5) {
-               var newValue = Math.min(5, currentValue + 1);
-               updateSliderDisplay(settingName, newValue);
-            }
+            newValue = Math.min(max, currentValue + step);
+            handled = true;
             break;
 
-         case KeyCodes.UP: // Up - increase value
+         case KeyCodes.UP:
             evt.preventDefault();
-            if (currentValue < 5) {
-               var newValue = Math.min(5, currentValue + 1);
-               updateSliderDisplay(settingName, newValue);
-            }
+            // Larger step for absolute positioning
+            var upStep = (settingName === "subtitlePositionAbsolute") ? 5 : step;
+            newValue = Math.min(max, currentValue + upStep);
+            handled = true;
             break;
 
-         case KeyCodes.DOWN: // Down - decrease value
+         case KeyCodes.DOWN:
             evt.preventDefault();
-            if (currentValue > 0) {
-               var newValue = Math.max(0, currentValue - 1);
-               updateSliderDisplay(settingName, newValue);
-            }
+            // Larger step for absolute positioning
+            var downStep = (settingName === "subtitlePositionAbsolute") ? 5 : step;
+            newValue = Math.max(0, currentValue - downStep);
+            handled = true;
             break;
 
-         case KeyCodes.ENTER: // Enter - confirm and exit slider mode
+         case KeyCodes.ENTER:
             evt.preventDefault();
             exitSliderMode(settingName, currentValue);
-            break;
+            return;
 
-         case KeyCodes.BACKSPACE: // Back - cancel slider mode
+         case KeyCodes.BACKSPACE:
          case KeyCodes.ESCAPE:
             evt.preventDefault();
-            // Reset to original value
-            exitSliderMode(
-               settingName,
-               settingName === "backdrop-blur-home"
-                  ? settings.backdropBlurHome
-                  : settings.backdropBlurDetail
-            );
+            exitSliderMode(settingName, currentValue);
+            return;
+      }
+
+      // Update display if value changed
+      if (handled && newValue !== currentValue) {
+         updateSliderDisplay(settingName, newValue);
+      }
+   }
+
+   // ==================== Absolute Slider Logic ====================
+
+   // Dedicated state for absolute slider to ensure stability
+   var absoluteSliderState = {
+      active: false,
+      value: 90
+   };
+
+   function enterAbsoluteSliderMode(initialValue) {
+      absoluteSliderState.active = true;
+      absoluteSliderState.value = parseInt(initialValue);
+      if (isNaN(absoluteSliderState.value)) absoluteSliderState.value = 90;
+
+      focusManager.inAbsoluteSliderMode = true;
+
+      var settingItem = document.querySelector('[data-setting="subtitlePositionAbsolute"]');
+      if (settingItem) {
+         settingItem.classList.add("slider-active");
+         var valueDisplay = settingItem.querySelector(".setting-value");
+         var sliderContainer = settingItem.querySelector(".slider-container");
+         if (valueDisplay) valueDisplay.style.display = "none";
+         if (sliderContainer) sliderContainer.style.display = "flex";
+
+         updateAbsoluteSliderVisuals();
+      }
+      console.log('[Settings] Entered Absolute Slider Mode. Value:', absoluteSliderState.value);
+   }
+
+   function updateAbsoluteSliderVisuals() {
+      var settingItem = document.querySelector('[data-setting="subtitlePositionAbsolute"]');
+      if (!settingItem) return;
+
+      var fillElement = settingItem.querySelector(".slider-fill");
+      var sliderValueDisplay = settingItem.querySelector(".slider-value-display");
+
+      if (fillElement) fillElement.style.width = absoluteSliderState.value + "%";
+      if (sliderValueDisplay) sliderValueDisplay.textContent = absoluteSliderState.value + "%";
+
+      // Live preview update
+      settings.subtitlePositionAbsolute = absoluteSliderState.value;
+      updateSubtitlePreview();
+   }
+
+   function handleAbsoluteSliderNavigation(evt) {
+      console.log('[Settings] Absolute Nav Key:', evt.keyCode);
+      evt.preventDefault(); // Consume all keys in this mode
+
+      var step = 1;
+      var largeStep = 5;
+
+      switch (evt.keyCode) {
+         case KeyCodes.LEFT:
+            absoluteSliderState.value = Math.max(0, absoluteSliderState.value - step);
+            updateAbsoluteSliderVisuals();
+            break;
+         case KeyCodes.RIGHT:
+            absoluteSliderState.value = Math.min(100, absoluteSliderState.value + step);
+            updateAbsoluteSliderVisuals();
+            break;
+         case KeyCodes.UP:
+            absoluteSliderState.value = Math.min(100, absoluteSliderState.value + largeStep);
+            updateAbsoluteSliderVisuals();
+            break;
+         case KeyCodes.DOWN:
+            absoluteSliderState.value = Math.max(0, absoluteSliderState.value - largeStep);
+            updateAbsoluteSliderVisuals();
+            break;
+         case KeyCodes.ENTER:
+         case KeyCodes.BACKSPACE:
+         case KeyCodes.ESCAPE:
+            exitAbsoluteSliderMode();
             break;
       }
+   }
+
+   function exitAbsoluteSliderMode() {
+      absoluteSliderState.active = false;
+      focusManager.inAbsoluteSliderMode = false;
+
+      // Persist
+      settings.subtitlePositionAbsolute = absoluteSliderState.value;
+      saveSettings();
+      updateSettingValues(); // Updates the main text display
+
+      var settingItem = document.querySelector('[data-setting="subtitlePositionAbsolute"]');
+      if (settingItem) {
+         settingItem.classList.remove("slider-active");
+         var valueDisplay = settingItem.querySelector(".setting-value");
+         var sliderContainer = settingItem.querySelector(".slider-container");
+         if (valueDisplay) valueDisplay.style.display = "block";
+         if (sliderContainer) sliderContainer.style.display = "none";
+      }
+      console.log('[Settings] Exited Absolute Slider Mode');
    }
 
    // ==================== Jellyseerr Functions ====================

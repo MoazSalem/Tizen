@@ -24,6 +24,12 @@ var SubtitleManager = (function () {
             if (!this.overlay) {
                 this.overlay = document.createElement('div');
                 this.overlay.className = 'videoSubtitles';
+                this.overlay.style.position = 'absolute';
+                this.overlay.style.top = '0';
+                this.overlay.style.left = '0';
+                this.overlay.style.width = '100%';
+                this.overlay.style.height = '100%';
+                this.overlay.style.pointerEvents = 'none'; // Click-through
                 this.overlay.style.display = 'none'; // Hidden by default
 
                 this.innerOverlay = document.createElement('div');
@@ -159,10 +165,11 @@ var SubtitleManager = (function () {
                     const stored = window.storage.getUserPreference('jellyfin_settings', null);
                     if (stored) {
                         const parsed = JSON.parse(stored);
-                        // Merge stored settings with defaults
+                        // Load all subtitle-related settings
                         if (parsed.subtitleSize) this.settings.subtitleSize = parsed.subtitleSize;
                         if (parsed.subtitleColor) this.settings.subtitleColor = parsed.subtitleColor;
                         if (parsed.subtitlePosition) this.settings.subtitlePosition = parsed.subtitlePosition;
+                        if (parsed.subtitlePositionAbsolute !== undefined) this.settings.subtitlePositionAbsolute = parsed.subtitlePositionAbsolute;
                         if (parsed.subtitleBackground) this.settings.subtitleBackground = parsed.subtitleBackground;
                         if (parsed.subtitleOpacity !== undefined) this.settings.subtitleOpacity = parsed.subtitleOpacity;
                         console.log('[SubtitleManager] Loaded settings:', this.settings);
@@ -263,6 +270,7 @@ var SubtitleManager = (function () {
             overlayStyle.left = '0';
             overlayStyle.right = '0';
 
+
             // Use flexbox for positioning
             overlayStyle.justifyContent = (position === 'top') ? 'flex-start' : 'flex-end';
 
@@ -270,16 +278,43 @@ var SubtitleManager = (function () {
             this.innerOverlay.style.marginTop = '0';
             this.innerOverlay.style.marginBottom = '10%'; // Default bottom
 
+            // Clean styles before applying specific positioning
+            this.innerOverlay.style.position = 'relative';
+            this.innerOverlay.style.width = 'auto';
+            this.innerOverlay.style.left = 'auto';
+            this.innerOverlay.style.top = 'auto';
+            this.innerOverlay.style.bottom = 'auto';
+            this.innerOverlay.style.textAlign = ''; // inherit
+
             if (position === 'top') {
                 this.innerOverlay.style.marginTop = '10%';
                 this.innerOverlay.style.marginBottom = '0';
             } else if (position === 'bottom-low') {
                 this.innerOverlay.style.marginBottom = '2%'; // Lower
+            } else if (position === 'bottom-extra-low') {
+                this.innerOverlay.style.marginBottom = '1%'; // Extra Lower
             } else if (position === 'bottom-high') {
                 this.innerOverlay.style.marginBottom = '20%'; // Higher
             } else if (position === 'middle') {
                 overlayStyle.justifyContent = 'center';
                 this.innerOverlay.style.marginBottom = '0';
+            } else if (position === 'absolute') {
+                overlayStyle.justifyContent = 'flex-start'; // Align to top
+                var absTop = conf.subtitlePositionAbsolute !== undefined ? conf.subtitlePositionAbsolute : 90;
+
+                // Use absolute positioning relative to the container
+                this.innerOverlay.style.position = 'absolute';
+                this.innerOverlay.style.top = absTop + '%';
+                this.innerOverlay.style.bottom = 'auto'; // Explicitly unset
+                this.innerOverlay.style.left = '0';
+                this.innerOverlay.style.width = '100%';
+                this.innerOverlay.style.textAlign = 'center';
+                this.innerOverlay.style.marginBottom = '0';
+                this.innerOverlay.style.marginTop = '0';
+            } else {
+                // Reset position for other modes (already done above, but safe to keep logic consistent)
+                this.innerOverlay.style.position = 'relative';
+                this.innerOverlay.style.top = 'auto';
             }
 
             // Background / Shadow
