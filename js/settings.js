@@ -56,6 +56,8 @@ var SettingsController = (function () {
       // Backdrop blur settings
       backdropBlurHome: 3,
       backdropBlurDetail: 3,
+      // Subtitle settings
+      subtitleOpacity: 100,
       // Jellyseerr settings
       jellyseerrEnabled: false,
       jellyseerrUrl: "",
@@ -344,6 +346,7 @@ var SettingsController = (function () {
          subtitleColor: "#ffffff",
          subtitlePosition: "bottom",
          subtitleBackground: "drop-shadow",
+         subtitleOpacity: 100,
       };
 
       for (var key in defaults) {
@@ -592,8 +595,13 @@ var SettingsController = (function () {
 
       var subtitleColorValue = document.getElementById("subtitleColorValue");
       if (subtitleColorValue) {
-         var colorMap = { "#ffffff": "White", "#ffff00": "Yellow", "#000000": "Black", "#00ffff": "Cyan", "#0000ff": "Blue" };
+         var colorMap = { "#ffffff": "White", "#ffff00": "Yellow", "#000000": "Black", "#00ffff": "Cyan", "#0000ff": "Blue", "#808080": "Gray", "#404040": "Dark Gray" };
          subtitleColorValue.textContent = colorMap[settings.subtitleColor] || "White";
+      }
+
+      var subtitleOpacityValue = document.getElementById("subtitleOpacityValue");
+      if (subtitleOpacityValue) {
+         subtitleOpacityValue.textContent = (settings.subtitleOpacity || 100) + "%";
       }
 
       var subtitlePositionValue = document.getElementById("subtitlePositionValue");
@@ -639,13 +647,25 @@ var SettingsController = (function () {
       var val = sizes[settings.subtitleSize || 'medium'] || sizes['medium'];
       s.fontSize = "calc(" + val + " * 0.6)";
 
-      // Color
-      s.color = settings.subtitleColor || '#ffffff';
+      // Opacity & Color - Convert Hex to RGBA
+      var opacityVal = (settings.subtitleOpacity !== undefined ? settings.subtitleOpacity : 100);
+      var hexColor = settings.subtitleColor || '#ffffff';
+
+      var r = parseInt(hexColor.slice(1, 3), 16);
+      var g = parseInt(hexColor.slice(3, 5), 16);
+      var b = parseInt(hexColor.slice(5, 7), 16);
+
+      s.color = 'rgba(' + r + ', ' + g + ', ' + b + ', ' + (opacityVal / 100) + ')';
+      s.opacity = ''; // Clear explicit opacity
+
+      // Reset text content
+      previewContainer.innerHTML = "This is a sample subtitle";
 
       // Background
       var bg = settings.subtitleBackground || 'drop-shadow';
       if (bg === 'drop-shadow') {
-         s.textShadow = '0px 0px 8px rgba(0, 0, 0, 1), 0px 0px 4px rgba(0, 0, 0, 1)';
+         var shadowOpacity = opacityVal / 100;
+         s.textShadow = '0px 0px 8px rgba(0, 0, 0, ' + shadowOpacity + '), 0px 0px 4px rgba(0, 0, 0, ' + shadowOpacity + ')';
          s.background = 'none';
       } else if (bg === 'background') {
          s.textShadow = 'none';
@@ -1433,10 +1453,22 @@ var SettingsController = (function () {
             break;
 
          case "subtitleColor":
-            var colors = ["#ffffff", "#ffff00", "#000000", "#00ffff", "#0000ff"];
+            var colors = ["#ffffff", "#ffff00", "#000000", "#00ffff", "#0000ff", "#808080", "#404040"];
             var currentColorIndex = colors.indexOf(settings.subtitleColor || "#ffffff");
             var nextColorIndex = (currentColorIndex + 1) % colors.length;
             settings.subtitleColor = colors[nextColorIndex];
+            settings.subtitleColor = colors[nextColorIndex];
+            saveSettings();
+            updateSettingValues();
+            updateSubtitlePreview();
+            break;
+
+         case "subtitleOpacity":
+            var opacities = [100, 75, 50, 25];
+            var currentOpacityIndex = opacities.indexOf(settings.subtitleOpacity || 100);
+            var nextOpacityIndex = (currentOpacityIndex + 1) % opacities.length;
+            settings.subtitleOpacity = opacities[nextOpacityIndex];
+            settings.subtitleOpacity = opacities[nextOpacityIndex];
             saveSettings();
             updateSettingValues();
             updateSubtitlePreview();

@@ -164,6 +164,7 @@ var SubtitleManager = (function () {
                         if (parsed.subtitleColor) this.settings.subtitleColor = parsed.subtitleColor;
                         if (parsed.subtitlePosition) this.settings.subtitlePosition = parsed.subtitlePosition;
                         if (parsed.subtitleBackground) this.settings.subtitleBackground = parsed.subtitleBackground;
+                        if (parsed.subtitleOpacity !== undefined) this.settings.subtitleOpacity = parsed.subtitleOpacity;
                         console.log('[SubtitleManager] Loaded settings:', this.settings);
                     }
                 }
@@ -235,8 +236,19 @@ var SubtitleManager = (function () {
             };
             s.fontSize = sizes[conf.subtitleSize || 'medium'] || sizes['medium'];
 
-            // Color
-            s.color = conf.subtitleColor || '#ffffff';
+            // Opacity & Color
+            var rawOpacity = conf.subtitleOpacity !== undefined ? conf.subtitleOpacity : 100;
+            var hexColor = conf.subtitleColor || '#ffffff';
+
+            // Convert Hex to RGBA for text opacity
+            var r = parseInt(hexColor.slice(1, 3), 16);
+            var g = parseInt(hexColor.slice(3, 5), 16);
+            var b = parseInt(hexColor.slice(5, 7), 16);
+
+            s.color = 'rgba(' + r + ', ' + g + ', ' + b + ', ' + (rawOpacity / 100) + ')';
+
+            // Remove CSS opacity to prevent affecting shadow/background indiscriminately if separated
+            s.opacity = '';
 
             // Vertical Position
             const position = conf.subtitlePosition || 'bottom';
@@ -273,7 +285,8 @@ var SubtitleManager = (function () {
             // Background / Shadow
             const bg = conf.subtitleBackground || 'drop-shadow';
             if (bg === 'drop-shadow') {
-                s.textShadow = '0px 0px 8px rgba(0, 0, 0, 1), 0px 0px 4px rgba(0, 0, 0, 1)';
+                var shadowOpacity = rawOpacity / 100;
+                s.textShadow = '0px 0px 8px rgba(0, 0, 0, ' + shadowOpacity + '), 0px 0px 4px rgba(0, 0, 0, ' + shadowOpacity + ')';
                 s.background = 'none';
             } else if (bg === 'background') {
                 s.textShadow = 'none';
