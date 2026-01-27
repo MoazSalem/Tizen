@@ -673,14 +673,14 @@ const Player = ({item, onEnded, onBack, onPlayNext}) => {
 			const key = e.key || e.keyCode;
 
 			// Back button - Tizen (10009), webOS (461), Browser Escape (27), Backspace (8)
-			if (isBackKey(e) || key === 'GoBack' || key === 'Backspace' || e.keyCode === 8) {
+			if (isBackKey(e) || key === 'GoBack' || key === 'Backspace') {
+				e.preventDefault();
+				e.stopPropagation();
 				if (activeModal) {
-					e.preventDefault();
 					closeModal();
 					return;
 				}
 				if (controlsVisible) {
-					e.preventDefault();
 					hideControls();
 					return;
 				}
@@ -748,8 +748,8 @@ const Player = ({item, onEnded, onBack, onPlayNext}) => {
 			}
 		};
 
-		window.addEventListener('keydown', handleKeyDown);
-		return () => window.removeEventListener('keydown', handleKeyDown);
+		window.addEventListener('keydown', handleKeyDown, true);
+		return () => window.removeEventListener('keydown', handleKeyDown, true);
 	}, [controlsVisible, activeModal, closeModal, hideControls, handleBack, showControls, handlePlayPause, handleRewind, handleForward]);
 
 	// Calculate progress

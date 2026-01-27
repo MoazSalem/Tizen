@@ -102,9 +102,12 @@ const AppContent = (props) => {
 
 	useEffect(() => {
 		const handleKeyDown = (e) => {
-			// Handle back button - Tizen (10009), webOS (461), Browser Escape (27)
+			// Handle back button - Tizen (10009), webOS (461), Browser Escape (27), Backspace (8)
 			if (isBackKey(e)) {
 				if (panelIndex === PANELS.BROWSE || panelIndex === PANELS.LOGIN) {
+					return;
+				}
+				if (panelIndex === PANELS.PLAYER || panelIndex === PANELS.SETTINGS) {
 					return;
 				}
 				e.preventDefault();
