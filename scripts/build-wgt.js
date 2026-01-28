@@ -147,6 +147,55 @@ async function main() {
 	}
 	success('Enact build complete');
 	
+	// Step 2.5: Patch index.html to fix ilib XHR file:// issue on Tizen
+	log('Patching index.html for Tizen file:// compatibility...');
+	const indexPath = path.join(DIST, 'index.html');
+	if (fs.existsSync(indexPath)) {
+		let html = fs.readFileSync(indexPath, 'utf8');
+		
+		// Add XHR patch script before the main.js script tag
+		const xhrPatch = `<script>
+// Patch XMLHttpRequest for Tizen file:// protocol compatibility
+// ilib tries to load locale files via XHR which fails on file:// URLs
+(function() {
+	var OrigXHR = window.XMLHttpRequest;
+	window.XMLHttpRequest = function() {
+		var xhr = new OrigXHR();
+		var origOpen = xhr.open;
+		xhr.open = function(method, url) {
+			// If it's a file:// URL trying to load ilib locale data, mock it
+			if (url && (url.indexOf('file://') === 0 || url.indexOf('ilib') !== -1 || url.indexOf('locale') !== -1)) {
+				this._mockIlib = true;
+				this._url = url;
+			}
+			return origOpen.apply(this, arguments);
+		};
+		var origSend = xhr.send;
+		xhr.send = function() {
+			if (this._mockIlib) {
+				var self = this;
+				setTimeout(function() {
+					Object.defineProperty(self, 'status', { value: 404, writable: false });
+					Object.defineProperty(self, 'readyState', { value: 4, writable: false });
+					Object.defineProperty(self, 'responseText', { value: '{}', writable: false });
+					if (self.onreadystatechange) self.onreadystatechange();
+					if (self.onload) self.onload();
+				}, 0);
+				return;
+			}
+			return origSend.apply(this, arguments);
+		};
+		return xhr;
+	};
+})();
+</script>
+`;
+		// Insert before the main.js script tag
+		html = html.replace(/<script defer="defer" src="main\.js"><\/script>/, xhrPatch + '<script defer="defer" src="main.js"></script>');
+		fs.writeFileSync(indexPath, html);
+		success('Patched index.html with XHR fix for ilib');
+	}
+	
 	// Step 3: Copy Tizen config files
 	log('Copying Tizen configuration...');
 	copyFiles(TIZEN_DIR, DIST);
