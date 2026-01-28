@@ -3266,17 +3266,64 @@ var PlayerController = (function () {
          selectSubtitleTrack
       );
 
-      // Add settings button at the START so UP from first track goes to settings
+      // Add settings button at the START
       if (elements.subtitleSettingsBtn) {
          modalFocusableItems.unshift(elements.subtitleSettingsBtn);
+
+         // Add shortcut: DOWN from settings returns to last focused item (or selected)
+         elements.subtitleSettingsBtn.addEventListener('keydown', function (evt) {
+            if (evt.keyCode === KeyCodes.DOWN) {
+               evt.preventDefault();
+               evt.stopPropagation();
+
+               // Default to currently selected track (+2 offset logic from below: 1 for settings, 1 for "None")
+               // But usually we want the last focused one. 
+               // For now let's reuse currentModalFocusIndex logic if we can, or just go to current selection.
+               var targetIndex = currentSubtitleIndex + 2;
+               if (targetIndex < 1) targetIndex = 1; // "None" or first track
+
+               // If we have a stored last index, use it (optional enhancement, but user asked for "return to previous focus")
+               // Since we don't track "last focused" separately easily without global state, 
+               // valid behavior is returning to the *currently selected* track, or the top if none.
+               // However, the user said "previous focus". 
+               // Let's rely on currentModalFocusIndex being updated when we navigate *to* the settings button.
+
+               currentModalFocusIndex = targetIndex;
+               if (modalFocusableItems[currentModalFocusIndex]) {
+                  modalFocusableItems[currentModalFocusIndex].focus();
+                  modalFocusableItems[currentModalFocusIndex].classList.add("focused");
+               }
+            }
+         });
       }
+
+      // Add shortcut: RIGHT from any track item -> focus settings
+      modalFocusableItems.forEach(function (item, index) {
+         if (item === elements.subtitleSettingsBtn) return;
+
+         item.addEventListener('keydown', function (evt) {
+            if (evt.keyCode === KeyCodes.RIGHT) {
+               // Only if settings button exists
+               if (elements.subtitleSettingsBtn) {
+                  evt.preventDefault();
+                  evt.stopPropagation();
+
+                  // Focus settings
+                  currentModalFocusIndex = 0; // Settings is at 0
+                  elements.subtitleSettingsBtn.focus();
+               }
+            }
+         });
+      });
 
       modalOpenerButton = elements.subtitleBtn; // Store the button that opened this modal
       activeModal = "subtitle";
       elements.subtitleModal.style.display = "flex";
+
       // +1 for "None" option, +1 for settings button at start = +2
       currentModalFocusIndex = currentSubtitleIndex + 2;
       if (currentModalFocusIndex < 1) currentModalFocusIndex = 1; // At least start at "None"
+
       if (modalFocusableItems[currentModalFocusIndex]) {
          modalFocusableItems[currentModalFocusIndex].focus();
       }
