@@ -2339,6 +2339,11 @@ var PlayerController = (function () {
          if (icon) icon.src = "assets/pause.png";
       }
       showControls();
+
+      // Ensure focus if not already on a control
+      if (elements.playPauseBtn && document.activeElement && !document.activeElement.classList.contains("control-btn")) {
+         elements.playPauseBtn.focus();
+      }
    }
 
    /**
@@ -2361,6 +2366,11 @@ var PlayerController = (function () {
          if (icon) icon.src = "assets/play.png";
       }
       showControls();
+
+      // Ensure focus if not already on a control
+      if (elements.playPauseBtn && document.activeElement && !document.activeElement.classList.contains("control-btn")) {
+         elements.playPauseBtn.focus();
+      }
    }
 
    /**
