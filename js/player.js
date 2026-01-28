@@ -3407,7 +3407,9 @@ var PlayerController = (function () {
       if (colorEl) colorEl.textContent = colorLabels[s.subtitleColor || '#ffffff'] || 'White';
 
       // Opacity
-      if (opacityEl) opacityEl.textContent = (s.subtitleOpacity || 100) + '%';
+      if (opacityEl) opacityEl.textContent = (s.subtitleOpacity !== undefined ? s.subtitleOpacity : 100) + '%';
+      var opacitySliderFill = document.getElementById('playerOpacitySliderFill');
+      if (opacitySliderFill) opacitySliderFill.style.width = (s.subtitleOpacity !== undefined ? s.subtitleOpacity : 100) + '%';
 
       // Position
       var posLabels = { bottom: 'Bottom', 'bottom-low': 'Bottom (Low)', 'bottom-extra-low': 'Bottom (Extra Low)', 'bottom-high': 'Bottom (High)', top: 'Top', middle: 'Middle', absolute: 'Absolute' };
@@ -3497,10 +3499,12 @@ var PlayerController = (function () {
             break;
 
          case 'opacity':
-            var opacities = [100, 75, 50, 25];
-            var opIdx = opacities.indexOf(s.subtitleOpacity || 100);
-            opIdx = (opIdx + direction + opacities.length) % opacities.length;
-            s.subtitleOpacity = opacities[opIdx];
+            // Slider: adjust value by step of 5
+            var val = parseInt(s.subtitleOpacity);
+            if (isNaN(val)) val = 100;
+            val = val + (direction * 5);
+            val = Math.max(0, Math.min(100, val));
+            s.subtitleOpacity = val;
             break;
 
          case 'position':

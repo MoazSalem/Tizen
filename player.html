@@ -225,9 +225,14 @@
                <span class="setting-label">Color</span>
                <span id="playerSubColor" class="setting-value">White</span>
             </div>
-            <div class="subtitle-setting-item" data-setting="opacity" tabindex="0">
+            <div class="subtitle-setting-item subtitle-setting-slider" data-setting="opacity" tabindex="0">
                <span class="setting-label">Opacity</span>
-               <span id="playerSubOpacity" class="setting-value">100%</span>
+               <div class="player-slider-container">
+                  <div class="player-slider-track">
+                     <div id="playerOpacitySliderFill" class="player-slider-fill"></div>
+                  </div>
+                  <span id="playerSubOpacity" class="setting-value">100%</span>
+               </div>
             </div>
             <div class="subtitle-setting-item" data-setting="position" tabindex="0">
                <span class="setting-label">Position</span>
