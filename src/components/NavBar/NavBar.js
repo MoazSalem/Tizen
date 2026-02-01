@@ -34,14 +34,21 @@ const NavBar = ({
 	useEffect(() => {
 		const updateClock = () => {
 			const now = new Date();
-			const hours = now.getHours().toString().padStart(2, '0');
+			let hours = now.getHours();
 			const minutes = now.getMinutes().toString().padStart(2, '0');
-			setClock(`${hours}:${minutes}`);
+			
+			if (settings.clockDisplay === '12-hour') {
+				const ampm = hours >= 12 ? 'PM' : 'AM';
+				hours = hours % 12 || 12;
+				setClock(`${hours}:${minutes} ${ampm}`);
+			} else {
+				setClock(`${hours.toString().padStart(2, '0')}:${minutes}`);
+			}
 		};
 		updateClock();
 		const interval = setInterval(updateClock, 1000);
 		return () => clearInterval(interval);
-	}, []);
+	}, [settings.clockDisplay]);
 
 	const userAvatarUrl = user?.PrimaryImageTag
 		? `${serverUrl}/Users/${user.Id}/Images/Primary?tag=${user.PrimaryImageTag}&quality=90&maxHeight=100`
