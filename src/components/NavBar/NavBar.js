@@ -75,8 +75,7 @@ const NavBar = ({
 			e.preventDefault();
 			e.stopPropagation();
 			const focusTargets = [
-				'featured-banner',
-				'settings-sidebar',
+				'featured-banner',			'row-0',				'settings-sidebar',
 				'favorites-row-0',
 				'details-primary-btn',
 				'genre-browse-grid',

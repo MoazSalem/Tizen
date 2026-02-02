@@ -115,7 +115,11 @@ const Browse = ({
 
 	const handleNavigateUp = useCallback((fromRowIndex) => {
 		if (fromRowIndex === 0) {
-			Spotlight.focus('featured-banner');
+			if (settings.showFeaturedBar !== false) {
+				Spotlight.focus('featured-banner');
+			} else {
+				Spotlight.focus('navbar-home');
+			}
 			return;
 		}
 		const targetIndex = fromRowIndex - 1;
@@ -246,14 +250,15 @@ const Browse = ({
 				cachedRowData = rowData;
 
 				if (randomItems?.Items?.length > 0) {
-					const shuffled = [...randomItems.Items].sort(() => Math.random() - 0.5);
-					const featuredWithLogos = shuffled.map(item => ({
-						...item,
-						LogoUrl: getLogoUrl(serverUrl, item, {maxWidth: 800, quality: 90})
-					}));
-					setFeaturedItems(featuredWithLogos);
-					cachedFeaturedItems = featuredWithLogos;
-				}
+                    const filteredItems = randomItems.Items.filter(item => item.Type !== 'BoxSet');
+                    const shuffled = [...filteredItems].sort(() => Math.random() - 0.5);
+                    const featuredWithLogos = shuffled.map(item => ({
+                        ...item,
+                        LogoUrl: getLogoUrl(serverUrl, item, {maxWidth: 800, quality: 90})
+                    }));
+                    setFeaturedItems(featuredWithLogos);
+                    cachedFeaturedItems = featuredWithLogos;
+                }
 			} catch (err) {
 				console.error('Failed to load browse data:', err);
 			} finally {
@@ -362,9 +367,13 @@ const Browse = ({
 			mainContentRef.current.scrollTo({top: 0, behavior: 'smooth'});
 		}
 		setTimeout(() => {
-			Spotlight.focus('featured-banner');
+			if (settings.showFeaturedBar !== false) {
+				Spotlight.focus('featured-banner');
+			} else {
+				Spotlight.focus('row-0');
+			}
 		}, FOCUS_DELAY_MS);
-	}, []);
+	}, [settings.showFeaturedBar]);
 
 	const handleFeaturedPrev = useCallback(() => {
 		if (featuredItems.length <= 1) return;
@@ -478,7 +487,7 @@ const Browse = ({
 			<div className={css.mainContent} ref={mainContentRef}>
 				{currentFeatured && (
 					<div
-						className={`${css.featuredBanner} ${browseMode === 'rows' ? css.featuredHidden : ''}`}
+						className={`${css.featuredBanner} ${browseMode === 'rows' || settings.showFeaturedBar === false ? css.featuredHidden : ''}`}
 					>
 						<SpottableDiv
 							className={css.featuredInner}
