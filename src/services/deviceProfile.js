@@ -1,4 +1,4 @@
-/* global webapis, localStorage */
+/* global webapis, tizen, localStorage */
 /**
  * Device Profile Service - Detects Samsung Tizen TV hardware capabilities
  *
@@ -20,59 +20,157 @@ export const clearCapabilitiesCache = () => {
 };
 
 /**
- * Detect Tizen version from firmware year.
+ * Map model year to Tizen platform version.
+ */
+export const yearToTizenVersion = (year) => {
+	if (year >= 2025) return 9;
+	if (year >= 2024) return 8;
+	if (year >= 2023) return 7;
+	if (year >= 2022) return 6.5;
+	if (year >= 2021) return 6;
+	if (year >= 2020) return 5.5;
+	if (year >= 2019) return 5;
+	if (year >= 2018) return 4;
+	if (year >= 2017) return 3;
+	if (year >= 2016) return 2.4;
+	return 4;
+};
+
+const TIZEN_VERSION_TO_YEAR = {
+	9: 2025, 8: 2024, 7: 2023, 6.5: 2022, 6: 2021,
+	5.5: 2020, 5: 2019, 4: 2018, 3: 2017, 2.4: 2016
+};
+
+/**
+ * Get model name from webapis (cached).
+ * Prefers getRealModel() over getModel() for accurate model string.
+ */
+let cachedModelName = null;
+const getModelName = () => {
+	if (cachedModelName !== null) return cachedModelName;
+	cachedModelName = '';
+	if (typeof webapis !== 'undefined' && webapis.productinfo) {
+		try {
+			if (typeof webapis.productinfo.getRealModel === 'function') {
+				cachedModelName = webapis.productinfo.getRealModel() || '';
+			}
+			if (!cachedModelName && typeof webapis.productinfo.getModel === 'function') {
+				cachedModelName = webapis.productinfo.getModel() || '';
+			}
+		} catch (e) {
+			// Fall through
+		}
+	}
+	return cachedModelName;
+};
+
+/**
+ * Get firmware string from webapis (cached).
+ */
+let cachedFirmware = null;
+const getFirmwareString = () => {
+	if (cachedFirmware !== null) return cachedFirmware;
+	cachedFirmware = '';
+	if (typeof webapis !== 'undefined' && webapis.productinfo) {
+		try {
+			if (typeof webapis.productinfo.getFirmware === 'function') {
+				cachedFirmware = webapis.productinfo.getFirmware() || '';
+			}
+		} catch (e) {
+			// Fall through
+		}
+	}
+	return cachedFirmware;
+};
+
+/**
+ * Extract model year from Samsung model name using the year-letter code.
+ * Samsung model naming: year is encoded as a letter in the model string.
+ * E.g., QN55Q60RAFXZA → 'R' = 2019, UN50TU7000 → 'T' = 2020
+ *
+ * Note: Letters recycle after 2021. Pre-Tizen years (≤2015) are excluded
+ * since those TVs don't run Tizen. This avoids conflicts like 'C' (2012 vs 2023).
+ */
+const detectYearFromModelName = (modelName) => {
+	if (!modelName) return null;
+	// Samsung model year letter codes (Tizen-era only: 2016+)
+	const yearLetters = {
+		'K': 2016, 'M': 2017, 'N': 2018, 'R': 2019,
+		'T': 2020, 'A': 2021, 'B': 2022, 'C': 2023,
+		'D': 2024
+	};
+	// Model format: prefix (UN/UE/QN/QE/GQ) + size + series + YEAR_LETTER + ...
+	// e.g., QN55Q60RAFXZA: after Q60, 'R' = 2019
+	// Also handles: QE55Q60RAT, GQ55Q60RGT, etc.
+	const match = modelName.match(/(?:UN|UE|QN|QE|GQ|UA|HG)\d{2,3}[A-Z]\w{1,4}([A-Z])/i);
+	if (match) {
+		const letter = match[1].toUpperCase();
+		if (yearLetters[letter]) {
+			return yearLetters[letter];
+		}
+	}
+	return null;
+};
+
+/**
+ * Detect Tizen version using multiple strategies:
+ * 1. tizen.systeminfo platform version API (most reliable)
+ * 2. Model name year-letter code
+ * 3. Firmware string year extraction (least reliable)
+ *
  * Mapping based on Samsung TV Model Groups documentation:
  * https://developer.samsung.com/smarttv/develop/specifications/tv-model-groups.html
  */
 export const detectTizenVersion = () => {
-	if (typeof webapis === 'undefined' || !webapis.productinfo) {
-		return 4; // Default assumption (2018)
+	// Strategy 1: Use tizen.systeminfo API for actual platform version
+	if (typeof tizen !== 'undefined' && tizen.systeminfo) {
+		try {
+			const platformVersion = tizen.systeminfo.getCapability(
+				'http://tizen.org/feature/platform.version'
+			);
+			if (platformVersion) {
+				const ver = parseFloat(platformVersion);
+				if (!isNaN(ver) && ver >= 2) {
+					console.log(`[deviceProfile] Tizen version from systeminfo: ${ver}`);
+					return ver;
+				}
+			}
+		} catch (e) {
+			console.log('[deviceProfile] systeminfo.getCapability not available');
+		}
 	}
 
-	try {
-		const firmware = webapis.productinfo.getFirmware();
-		// Try to extract year from firmware string
-		const match = firmware?.match(/(\d{4})/);
+	// Strategy 2: Parse model name year letter
+	const yearFromModel = detectYearFromModelName(getModelName());
+	if (yearFromModel) {
+		console.log(`[deviceProfile] Tizen version from model name (${getModelName()}, year ${yearFromModel})`);
+		return yearToTizenVersion(yearFromModel);
+	}
+
+	// Strategy 3: Extract year from firmware string (least reliable)
+	const firmware = getFirmwareString();
+	if (firmware) {
+		const match = firmware.match(/(\d{4})/);
 		if (match) {
 			const year = parseInt(match[1], 10);
-			// Map TV years to Tizen versions per Samsung documentation
-			if (year >= 2025) return 9;
-			if (year >= 2024) return 8;
-			if (year >= 2023) return 7;
-			if (year >= 2022) return 6.5;
-			if (year >= 2021) return 6;
-			if (year >= 2020) return 5.5;
-			if (year >= 2019) return 5;
-			if (year >= 2018) return 4;
-			if (year >= 2017) return 3;
-			if (year >= 2016) return 2.4;
+			if (year >= 2015 && year <= 2030) {
+				console.log(`[deviceProfile] Tizen version from firmware year: ${year}`);
+				return yearToTizenVersion(year);
+			}
 		}
-	} catch (e) {
-		console.log('[deviceProfile] Could not detect Tizen version');
 	}
 
 	return 4;
 };
 
 /**
- * Determine the model year from firmware for spec-accurate capability mapping.
+ * Determine the model year. Uses model name year-letter, falls back to Tizen version.
  */
 const detectModelYear = () => {
-	if (typeof webapis === 'undefined' || !webapis.productinfo) {
-		return 2018; // Default assumption
-	}
+	const yearFromModel = detectYearFromModelName(getModelName());
+	if (yearFromModel) return yearFromModel;
 
-	try {
-		const firmware = webapis.productinfo.getFirmware();
-		const match = firmware?.match(/(\d{4})/);
-		if (match) {
-			return parseInt(match[1], 10);
-		}
-	} catch (e) {
-		// Fall through
-	}
-
-	return 2018;
+	return TIZEN_VERSION_TO_YEAR[detectTizenVersion()] || 2018;
 };
 
 /**
@@ -169,15 +267,13 @@ export const getDeviceCapabilities = async () => {
 	// Fallback to false — let runtime detection enable it
 	let dolbyVision = false;
 
+	// Use cached helpers for model name and firmware (already fetched during version detection)
+	modelName = getModelName() || modelName;
+	const firmwareVersion = getFirmwareString();
+
 	if (typeof webapis !== 'undefined') {
 		try {
 			if (webapis.productinfo) {
-				if (typeof webapis.productinfo.getModel === 'function') {
-					modelName = webapis.productinfo.getModel();
-				}
-				if (typeof webapis.productinfo.getRealModel === 'function') {
-					modelName = webapis.productinfo.getRealModel();
-				}
 				if (typeof webapis.productinfo.getDuid === 'function') {
 					deviceId = webapis.productinfo.getDuid();
 				}
@@ -211,7 +307,7 @@ export const getDeviceCapabilities = async () => {
 		modelNameAscii: modelName,
 		serialNumber,
 		deviceId,
-		firmwareVersion: '',
+		firmwareVersion,
 
 		tizenVersion,
 		modelYear,

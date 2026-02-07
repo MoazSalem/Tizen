@@ -1,7 +1,8 @@
 /**
  * Tizen Video Service - Hardware-accelerated video playback using AVPlay APIs
  */
-/* global webapis, navigator */
+/* global webapis, tizen, navigator */
+import {detectTizenVersion as _detectTizenVersion} from './deviceProfile';
 
 let isAVPlayAvailable = false;
 
@@ -12,32 +13,8 @@ export const isTizen = () => {
 	return ua.includes('tizen');
 };
 
-export const getTizenVersion = () => {
-	// Try to get from webapis
-	if (typeof webapis !== 'undefined' && webapis.productinfo) {
-		try {
-			const firmware = webapis.productinfo.getFirmware();
-			// Firmware format varies, try to extract year
-			const match = firmware?.match(/(\d{4})/);
-			if (match) {
-				const year = parseInt(match[1], 10);
-				// Map years to Tizen versions per Samsung TV Model Groups docs
-				if (year >= 2025) return 9;
-				if (year >= 2024) return 8;
-				if (year >= 2023) return 7;
-				if (year >= 2022) return 6.5;
-				if (year >= 2021) return 6;
-				if (year >= 2020) return 5.5;
-				if (year >= 2019) return 5;
-				if (year >= 2018) return 4;
-				if (year >= 2017) return 3;
-			}
-		} catch (e) {
-			console.log('[tizenVideo] Could not get firmware version');
-		}
-	}
-	return 4; // Default assumption
-};
+// Delegate to the implementation in deviceProfile.js
+export const getTizenVersion = () => _detectTizenVersion();
 
 export const initTizenAPI = async () => {
 	if (!isTizen()) {

@@ -927,6 +927,8 @@ const Settings = ({onBack, onLogout, onAddServer, onAddUser}) => {
 						<span className={css.infoValue}>
 							{[
 								capabilities.hdr10 && 'HDR10',
+								capabilities.hdr10Plus && 'HDR10+',
+								capabilities.hlg && 'HLG',
 								capabilities.dolbyVision && 'Dolby Vision'
 							].filter(Boolean).join(', ') || 'Not supported'}
 						</span>
