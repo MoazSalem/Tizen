@@ -5,6 +5,7 @@
  * so we can fetch images directly without a proxy.
  * This module maintains the same API for compatibility.
  */
+/* global FileReader */
 
 const imageCache = new Map();
 const pendingRequests = new Map();

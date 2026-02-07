@@ -161,22 +161,36 @@ const extractSubtitleStreams = (mediaSource, credentials = null) => {
 
 	return mediaSource.MediaStreams
 		.filter(s => s.Type === 'Subtitle')
-		.map(s => ({
-			index: s.Index,
-			codec: s.Codec,
-			language: s.Language || 'Unknown',
-			displayTitle: s.DisplayTitle || s.Language || 'Unknown',
-			isExternal: s.IsExternal,
-			isForced: s.IsForced,
-			isDefault: s.IsDefault,
+		.map(s => {
+			const codec = s.Codec?.toLowerCase() || '';
 			// Text-based subtitle codecs that can be rendered client-side
 			// subrip = srt, webvtt = vtt, sami = smi
-			isTextBased: ['srt', 'subrip', 'vtt', 'webvtt', 'ass', 'ssa', 'sub', 'smi', 'sami'].includes(s.Codec?.toLowerCase()),
-			deliveryMethod: s.DeliveryMethod,
-			deliveryUrl: s.DeliveryMethod === 'External' && s.DeliveryUrl
-				? (s.DeliveryUrl.startsWith('http') ? s.DeliveryUrl : `${serverUrl}${s.DeliveryUrl}`)
-				: null
-		}));
+			const isTextBased = ['srt', 'subrip', 'vtt', 'webvtt', 'ass', 'ssa', 'sub', 'smi', 'sami'].includes(codec);
+			const isExternal = s.IsExternal;
+			const deliveryMethod = s.DeliveryMethod;
+
+			// Internal text-based subtitles (e.g. SRT/SubRip embedded in MKV) are handled
+			// natively by AVPlay when DeliveryMethod is 'Embed'. No server extraction needed.
+			const isEmbeddedTextSub = isTextBased && !isExternal && deliveryMethod === 'Embed';
+
+			return {
+				index: s.Index,
+				codec: s.Codec,
+				language: s.Language || 'Unknown',
+				displayTitle: s.DisplayTitle || s.Language || 'Unknown',
+				isExternal,
+				isForced: s.IsForced,
+				isDefault: s.IsDefault,
+				isTextBased,
+				// True when the subtitle is embedded in the container and AVPlay
+				// can read it natively (no server-side extraction required)
+				isEmbeddedNative: isEmbeddedTextSub,
+				deliveryMethod,
+				deliveryUrl: deliveryMethod === 'External' && s.DeliveryUrl
+					? (s.DeliveryUrl.startsWith('http') ? s.DeliveryUrl : `${serverUrl}${s.DeliveryUrl}`)
+					: null
+			};
+		});
 };
 
 const extractChapters = (mediaSource) => {
@@ -270,6 +284,14 @@ export const getPlaybackInfo = async (itemId, options = {}) => {
 export const getSubtitleUrl = (subtitleStream) => {
 	if (!subtitleStream || !currentSession) return null;
 
+	// For embedded text subtitles (DeliveryMethod: 'Embed'), no server URL is needed
+	// because AVPlay reads them natively from the container. Return null to signal
+	// that the subtitle should be accessed via native track selection, not via server fetch.
+	if (subtitleStream.isEmbeddedNative) {
+		console.log('[Playback] Subtitle', subtitleStream.index, 'is natively embedded — no server URL needed');
+		return null;
+	}
+
 	// Request WebVTT for any text-based subtitle - server converts ASS/SSA/SRT as needed
 	if (subtitleStream.isTextBased) {
 		const {itemId, mediaSourceId, serverCredentials} = currentSession;
@@ -282,9 +304,14 @@ export const getSubtitleUrl = (subtitleStream) => {
 };
 
 /**
- * Fetch subtitle track events as JSON data for custom rendering
- * This is required on Tizen because native <track> elements don't work reliably with AVPlay
- * The .js format returns JSON with TrackEvents array containing StartPositionTicks, EndPositionTicks, Text
+ * Fetch subtitle track events as JSON data for custom rendering.
+ * For external subtitles and non-native embedded subtitles, this fetches from the
+ * Jellyfin server API. For natively embedded subtitles (DeliveryMethod: 'Embed'),
+ * this returns null because AVPlay reads them directly from the container via
+ * getTotalTrackInfo() / setSelectTrack('TEXT', index) / onsubtitlechange callback.
+ *
+ * The .js format returns JSON with TrackEvents array containing:
+ * StartPositionTicks, EndPositionTicks, Text
  */
 export const fetchSubtitleData = async (subtitleStream) => {
 	if (!subtitleStream || !currentSession) return null;
@@ -295,6 +322,13 @@ export const fetchSubtitleData = async (subtitleStream) => {
 
 	if (!subtitleStream.isTextBased) {
 		console.log('[Playback] Subtitle stream is not text-based, cannot fetch as JSON');
+		return null;
+	}
+
+	// Natively embedded subtitles are handled by AVPlay directly —
+	// no server fetch needed. Return null to signal native track usage.
+	if (subtitleStream.isEmbeddedNative) {
+		console.log('[Playback] Subtitle', subtitleStream.index, 'is natively embedded — skipping server fetch');
 		return null;
 	}
 

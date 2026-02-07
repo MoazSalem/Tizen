@@ -481,18 +481,34 @@ export const getJellyfinDeviceProfile = async () => {
 
 	// Subtitle profiles
 	// Samsung general specs: SAMI (UTF-8), SubRip, SMPTE-TT, WebVTT (out-of-band), Closed Caption
-	// Samsung AVPlay natively supports: SAMI (.smi), SMPTE-TT, DFXP (Smooth Streaming only)
+	// Samsung AVPlay natively supports internal subtitles: SubRip, SAMI, SMPTE-TT, DFXP
+	// See: https://developer.samsung.com/smarttv/develop/guides/multimedia/subtitles.html
 	// For HLS: Samsung recommends WebVTT (out-of-band)
-	// Jellyfin delivers external subs as VTT via its API, so ASS/SSA work
-	// after server-side conversion to VTT.
+	//
+	// Embed: Tells Jellyfin that embedded text subtitles can stay in the container
+	// during DirectPlay — no server-side extraction needed. AVPlay reads them natively.
+	// External: Server delivers subtitle files via API (external subs or on-demand fetch).
 	const subtitleProfiles = [
-		{Format: 'srt', Method: 'External'},  // Samsung native SubRip support
+		// Embed method for internal text-based subtitles — AVPlay handles natively
+		// This prevents Jellyfin from extracting subtitles during playback setup,
+		// which avoids unnecessary server load especially for large media files.
+		{Format: 'srt', Method: 'Embed'},      // AVPlay native SubRip support
+		{Format: 'subrip', Method: 'Embed'},   // SubRip alternate codec name in Jellyfin
+		{Format: 'ass', Method: 'Embed'},      // Advanced SubStation Alpha
+		{Format: 'ssa', Method: 'Embed'},      // SubStation Alpha
+		{Format: 'smi', Method: 'Embed'},      // AVPlay native SAMI support
+		{Format: 'ttml', Method: 'Embed'},     // AVPlay native SMPTE-TT support
+		{Format: 'sub', Method: 'Embed'},      // MicroDVD / SubViewer
+		{Format: 'vtt', Method: 'Embed'},      // WebVTT embedded
+		// External method for server-delivered subtitle files
+		{Format: 'srt', Method: 'External'},   // Samsung native SubRip support
 		{Format: 'vtt', Method: 'External'},   // Native WebVTT — Samsung recommended for HLS
 		{Format: 'ass', Method: 'External'},   // Jellyfin converts to VTT for delivery
 		{Format: 'ssa', Method: 'External'},   // Jellyfin converts to VTT for delivery
 		{Format: 'smi', Method: 'External'},   // Samsung native SAMI support
 		{Format: 'ttml', Method: 'External'},  // Samsung native SMPTE-TT support
 		{Format: 'sub', Method: 'External'},   // Jellyfin converts for delivery
+		// Image-based: burn-in only (client cannot render these)
 		{Format: 'pgs', Method: 'Embed'},      // Burn-in only — image-based subtitle
 		{Format: 'dvdsub', Method: 'Embed'},   // Burn-in only — image-based subtitle
 		{Format: 'dvbsub', Method: 'Embed'}    // Burn-in only — image-based subtitle
