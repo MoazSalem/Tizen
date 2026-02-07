@@ -169,10 +169,6 @@ const extractSubtitleStreams = (mediaSource, credentials = null) => {
 			const isExternal = s.IsExternal;
 			const deliveryMethod = s.DeliveryMethod;
 
-			// Internal text-based subtitles (e.g. SRT/SubRip embedded in MKV) are handled
-			// natively by AVPlay when DeliveryMethod is 'Embed'. No server extraction needed.
-			const isEmbeddedTextSub = isTextBased && !isExternal && deliveryMethod === 'Embed';
-
 			return {
 				index: s.Index,
 				codec: s.Codec,
@@ -182,9 +178,7 @@ const extractSubtitleStreams = (mediaSource, credentials = null) => {
 				isForced: s.IsForced,
 				isDefault: s.IsDefault,
 				isTextBased,
-				// True when the subtitle is embedded in the container and AVPlay
-				// can read it natively (no server-side extraction required)
-				isEmbeddedNative: isEmbeddedTextSub,
+				isEmbeddedNative: false, // Always use server extraction
 				deliveryMethod,
 				deliveryUrl: deliveryMethod === 'External' && s.DeliveryUrl
 					? (s.DeliveryUrl.startsWith('http') ? s.DeliveryUrl : `${serverUrl}${s.DeliveryUrl}`)
@@ -284,15 +278,7 @@ export const getPlaybackInfo = async (itemId, options = {}) => {
 export const getSubtitleUrl = (subtitleStream) => {
 	if (!subtitleStream || !currentSession) return null;
 
-	// For embedded text subtitles (DeliveryMethod: 'Embed'), no server URL is needed
-	// because AVPlay reads them natively from the container. Return null to signal
-	// that the subtitle should be accessed via native track selection, not via server fetch.
-	if (subtitleStream.isEmbeddedNative) {
-		console.log('[Playback] Subtitle', subtitleStream.index, 'is natively embedded — no server URL needed');
-		return null;
-	}
-
-	// Request WebVTT for any text-based subtitle - server converts ASS/SSA/SRT as needed
+	// Request WebVTT for any text-based subtitle. Server extracts and converts as needed
 	if (subtitleStream.isTextBased) {
 		const {itemId, mediaSourceId, serverCredentials} = currentSession;
 		const serverUrl = serverCredentials?.serverUrl || jellyfinApi.getServerUrl();
@@ -305,13 +291,9 @@ export const getSubtitleUrl = (subtitleStream) => {
 
 /**
  * Fetch subtitle track events as JSON data for custom rendering.
- * For external subtitles and non-native embedded subtitles, this fetches from the
- * Jellyfin server API. For natively embedded subtitles (DeliveryMethod: 'Embed'),
- * this returns null because AVPlay reads them directly from the container via
- * getTotalTrackInfo() / setSelectTrack('TEXT', index) / onsubtitlechange callback.
- *
- * The .js format returns JSON with TrackEvents array containing:
- * StartPositionTicks, EndPositionTicks, Text
+ * Jellyfin extracts the subtitle track from the container and returns it
+ * as JSON with TrackEvents array containing StartPositionTicks,
+ * EndPositionTicks, and Text for each subtitle cue.
  */
 export const fetchSubtitleData = async (subtitleStream) => {
 	if (!subtitleStream || !currentSession) return null;
@@ -322,13 +304,6 @@ export const fetchSubtitleData = async (subtitleStream) => {
 
 	if (!subtitleStream.isTextBased) {
 		console.log('[Playback] Subtitle stream is not text-based, cannot fetch as JSON');
-		return null;
-	}
-
-	// Natively embedded subtitles are handled by AVPlay directly —
-	// no server fetch needed. Return null to signal native track usage.
-	if (subtitleStream.isEmbeddedNative) {
-		console.log('[Playback] Subtitle', subtitleStream.index, 'is natively embedded — skipping server fetch');
 		return null;
 	}
 
@@ -545,7 +520,14 @@ class PlaybackHealthMonitor {
 		this.stallCount = 0;
 		this.bufferEvents = [];
 		this.lastProgressTime = Date.now();
+		this.startTime = Date.now();
 		this.isHealthy = true;
+		this.hasFiredCallback = false;
+	}
+
+	// Grace period: ignore health checks for the first 20 seconds of playback
+	_isInGracePeriod() {
+		return Date.now() - this.startTime < 20000;
 	}
 
 	recordBuffer() {
@@ -553,23 +535,35 @@ class PlaybackHealthMonitor {
 		const cutoff = Date.now() - 30000;
 		this.bufferEvents = this.bufferEvents.filter(t => t > cutoff);
 
-		if (this.bufferEvents.length > 5) {
+		// Require >10 buffer events in 30s window and not in grace period
+		if (this.bufferEvents.length > 10 && !this._isInGracePeriod()) {
 			this.isHealthy = false;
 		}
 	}
 
 	recordStall() {
+		if (this._isInGracePeriod()) return;
 		this.stallCount++;
-		if (this.stallCount > 3) {
+		if (this.stallCount > 5) {
 			this.isHealthy = false;
 		}
 	}
 
 	recordProgress() {
 		this.lastProgressTime = Date.now();
+		// Allow recovery: if we're making progress, we're healthy again
+		if (!this.isHealthy) {
+			this.isHealthy = true;
+			this.stallCount = 0;
+			this.hasFiredCallback = false;
+			console.log('[HealthMonitor] Playback recovered, marking healthy');
+		}
 	}
 
 	checkHealth() {
+		// Don't flag unhealthy during grace period
+		if (this._isInGracePeriod()) return true;
+
 		if (Date.now() - this.lastProgressTime > 30000) {
 			this.isHealthy = false;
 		}
@@ -580,11 +574,19 @@ class PlaybackHealthMonitor {
 		this.stallCount = 0;
 		this.bufferEvents = [];
 		this.lastProgressTime = Date.now();
+		this.startTime = Date.now();
 		this.isHealthy = true;
+		this.hasFiredCallback = false;
 	}
 
 	shouldFallbackToTranscode() {
-		return !this.isHealthy && currentSession?.playMethod !== PlayMethod.Transcode;
+		// Only fire the callback once per unhealthy period
+		if (this.hasFiredCallback) return false;
+		const shouldFallback = !this.isHealthy && currentSession?.playMethod !== PlayMethod.Transcode;
+		if (shouldFallback) {
+			this.hasFiredCallback = true;
+		}
+		return shouldFallback;
 	}
 }
 
