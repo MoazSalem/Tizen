@@ -1,4 +1,4 @@
-/* global webapis, navigator */
+/* global webapis */
 /**
  * Server Logger Service for Tizen
  * Sends diagnostic logs to Jellyfin server for debugging

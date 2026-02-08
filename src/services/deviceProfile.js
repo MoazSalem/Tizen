@@ -1,4 +1,4 @@
-/* global webapis, tizen, localStorage */
+/* global webapis, tizen */
 /**
  * Device Profile Service - Detects Samsung Tizen TV hardware capabilities
  *

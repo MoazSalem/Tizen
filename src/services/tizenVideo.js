@@ -1,7 +1,7 @@
 /**
  * Tizen Video Service - Hardware-accelerated video playback using AVPlay APIs
  */
-/* global webapis, tizen, navigator */
+/* global webapis, tizen */
 import {detectTizenVersion as _detectTizenVersion} from './deviceProfile';
 
 let isAVPlayAvailable = false;

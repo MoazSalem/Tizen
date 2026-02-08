@@ -49,6 +49,8 @@ function findTizenCLI() {
 		'C:\\tizen-studio\\tools\\ide\\bin\\tizen.bat',
 		process.env.LOCALAPPDATA + '\\tizen-studio\\tools\\ide\\bin\\tizen.bat',
 		process.env.USERPROFILE + '\\tizen-studio\\tools\\ide\\bin\\tizen.bat',
+		// Tizen VS Code Extension path
+		process.env.USERPROFILE + '\\.tizen-extension-platform\\server\\sdktools\\data\\tools\\ide\\bin\\tizen.bat',
 		// macOS/Linux
 		'/usr/local/tizen-studio/tools/ide/bin/tizen',
 		process.env.HOME + '/tizen-studio/tools/ide/bin/tizen',
@@ -73,6 +75,8 @@ function findSDB() {
 		'C:\\tizen-studio\\tools\\sdb.exe',
 		process.env.LOCALAPPDATA + '\\tizen-studio\\tools\\sdb.exe',
 		process.env.USERPROFILE + '\\tizen-studio\\tools\\sdb.exe',
+		// Tizen VS Code Extension path
+		process.env.USERPROFILE + '\\.tizen-extension-platform\\server\\sdktools\\data\\tools\\sdb.exe',
 		// macOS/Linux
 		'/usr/local/tizen-studio/tools/sdb',
 		process.env.HOME + '/tizen-studio/tools/sdb',

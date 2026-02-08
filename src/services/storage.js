@@ -1,4 +1,3 @@
-/* global localStorage */
 /**
  * Storage Service for Tizen
  *

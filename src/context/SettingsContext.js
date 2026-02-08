@@ -14,10 +14,17 @@ const defaultSettings = {
 	maxBitrate: 0,
 	audioLanguage: '',
 	subtitleLanguage: '',
-	subtitleMode: 'default',
-	subtitleSize: 'medium',
-	subtitlePosition: 'bottom',
-	seekStep: 10,
+	// Subtitle Settings
+	subtitleSize: 'medium', // small, medium, large, xlarge
+	subtitlePosition: 'bottom', // bottom, lower, middle, higher
+	subtitleOpacity: 100, // 0-100
+	subtitleBackground: 75, // 0-100 (opacity of background)
+	subtitleBackgroundColor: '#000000', // Hex color
+	subtitleColor: '#ffffff', // Hex color
+	subtitleShadowColor: '#000000', // Hex color
+	subtitleShadowOpacity: 50, // 0-100
+	subtitleShadowBlur: 0.1, // em/px size of shadow
+	subtitlePositionAbsolute: 90, // 0-100 (from top)
 	skipIntro: true,
 	skipCredits: false,
 	autoPlay: true,

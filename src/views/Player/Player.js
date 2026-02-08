@@ -9,6 +9,8 @@ import {initTizenAPI, registerAppStateObserver, keepScreenOn, cleanupVideoElemen
 import {useSettings} from '../../context/SettingsContext';
 import {TIZEN_KEYS, isBackKey, isPlayPauseKey} from '../../utils/tizenKeys';
 import TrickplayPreview from '../../components/TrickplayPreview';
+import SubtitleOffsetOverlay from './SubtitleOffsetOverlay';
+import SubtitleSettingsOverlay from './SubtitleSettingsOverlay';
 
 import css from './Player.module.less';
 
@@ -160,6 +162,7 @@ const Player = ({item, onEnded, onBack, onPlayNext, initialAudioIndex, initialSu
 	const [selectedSubtitleIndex, setSelectedSubtitleIndex] = useState(-1);
 	const [subtitleUrl, setSubtitleUrl] = useState(null);
 	const [subtitleTrackEvents, setSubtitleTrackEvents] = useState(null);
+	const [subtitleOffset, setSubtitleOffset] = useState(0);
 	const [currentSubtitleText, setCurrentSubtitleText] = useState(null);
 	const [controlsVisible, setControlsVisible] = useState(false);
 	const [activeModal, setActiveModal] = useState(null);
@@ -486,9 +489,13 @@ const Player = ({item, onEnded, onBack, onPlayNext, initialAudioIndex, initialSu
 
 			// Update custom subtitle text - match current position to subtitle events
 			if (subtitleTrackEvents && subtitleTrackEvents.length > 0) {
+				// Apply offset: lookupTime = currentTime - offset
+				// If offset is positive (delay), we look at earlier time in the subtitle track
+				const lookupTicks = ticks - (subtitleOffset * 10000000);
+
 				let foundSubtitle = null;
 				for (const event of subtitleTrackEvents) {
-					if (ticks >= event.StartPositionTicks && ticks <= event.EndPositionTicks) {
+					if (lookupTicks >= event.StartPositionTicks && lookupTicks <= event.EndPositionTicks) {
 						foundSubtitle = event.Text;
 						break;
 					}
@@ -524,7 +531,7 @@ const Player = ({item, onEnded, onBack, onPlayNext, initialAudioIndex, initialSu
 				}
 			}
 		}
-	}, [mediaSegments, settings.skipIntro, settings.skipCredits, settings.autoPlay, nextEpisode, showSkipCredits, showNextEpisode, startNextEpisodeCountdown, handlePlayNextEpisode, subtitleTrackEvents]);
+	}, [mediaSegments, settings.skipIntro, settings.skipCredits, settings.autoPlay, nextEpisode, showSkipCredits, showNextEpisode, startNextEpisodeCountdown, handlePlayNextEpisode, subtitleTrackEvents, subtitleOffset]);
 
 	const handleWaiting = useCallback(() => {
 		setIsBuffering(true);
@@ -738,6 +745,7 @@ const Player = ({item, onEnded, onBack, onPlayNext, initialAudioIndex, initialSu
 	// Progress bar keyboard control
 	const handleProgressKeyDown = useCallback((e) => {
 		if (!videoRef.current) return;
+		showControls(); // Reset OSD timer
 		const step = settings.seekStep;
 
 		if (e.key === 'ArrowLeft' || e.keyCode === 37) {
@@ -761,7 +769,7 @@ const Player = ({item, onEnded, onBack, onPlayNext, initialAudioIndex, initialSu
 			setFocusRow('bottom');
 			setIsSeeking(false);
 		}
-	}, [duration, settings.seekStep]);
+	}, [duration, settings.seekStep, showControls]);
 
 	const handleProgressBlur = useCallback(() => {
 		setIsSeeking(false);
@@ -793,6 +801,10 @@ const Player = ({item, onEnded, onBack, onPlayNext, initialAudioIndex, initialSu
 		}
 	}, [handleButtonAction]);
 
+	const handleSubtitleOffsetChange = useCallback((newOffset) => {
+		setSubtitleOffset(newOffset);
+	}, []);
+
 	// Prevent propagation handler for modals
 	const stopPropagation = useCallback((e) => {
 		e.stopPropagation();
@@ -808,6 +820,7 @@ const Player = ({item, onEnded, onBack, onPlayNext, initialAudioIndex, initialSu
 				// Play key
 				e.preventDefault();
 				e.stopPropagation();
+				showControls(); // Show OSD
 				if (videoRef.current && videoRef.current.paused) {
 					videoRef.current.play();
 				}
@@ -817,9 +830,18 @@ const Player = ({item, onEnded, onBack, onPlayNext, initialAudioIndex, initialSu
 				// Pause key
 				e.preventDefault();
 				e.stopPropagation();
+				showControls(); // Show OSD
 				if (videoRef.current && !videoRef.current.paused) {
 					videoRef.current.pause();
 				}
+				return;
+			}
+			if (e.keyCode === TIZEN_KEYS.PLAY_PAUSE) {
+				// Play/Pause key
+				e.preventDefault();
+				e.stopPropagation();
+				showControls(); // Show OSD
+				handlePlayPause();
 				return;
 			}
 			if (e.keyCode === TIZEN_KEYS.FAST_FORWARD) {
@@ -891,6 +913,8 @@ const Player = ({item, onEnded, onBack, onPlayNext, initialAudioIndex, initialSu
 
 			// Up/Down arrow navigation between rows when controls are visible
 			if (controlsVisible && !activeModal) {
+				showControls(); // Reset timer on navigation
+
 				if (key === 'ArrowUp' || e.keyCode === 38) {
 					e.preventDefault();
 					setFocusRow(prev => {
@@ -912,7 +936,7 @@ const Player = ({item, onEnded, onBack, onPlayNext, initialAudioIndex, initialSu
 			}
 
 			// Play/Pause with Enter when controls not focused
-			if ((key === 'Enter' || e.keyCode === 13) && !controlsVisible) {
+			if ((key === 'Enter' || e.keyCode === 13) && !controlsVisible && !activeModal) {
 				handlePlayPause();
 				return;
 			}
@@ -990,13 +1014,19 @@ const Player = ({item, onEnded, onBack, onPlayNext, initialAudioIndex, initialSu
 				<div
 					className={css.subtitleOverlay}
 					style={{
-						bottom: `${settings.subtitlePosition === 'bottom' ? 10 : settings.subtitlePosition === 'lower' ? 15 : settings.subtitlePosition === 'middle' ? 25 : 35}%`
+						bottom: settings.subtitlePosition === 'absolute'
+							? `${100 - settings.subtitlePositionAbsolute}%`
+							: `${settings.subtitlePosition === 'bottom' ? 10 : settings.subtitlePosition === 'lower' ? 15 : settings.subtitlePosition === 'middle' ? 25 : 35}%`,
+						opacity: (settings.subtitleOpacity || 100) / 100
 					}}
 				>
 					<div
 						className={css.subtitleText}
 						style={{
-							fontSize: `${settings.subtitleSize === 'small' ? 28 : settings.subtitleSize === 'medium' ? 36 : settings.subtitleSize === 'large' ? 44 : 52}px`
+							fontSize: `${settings.subtitleSize === 'small' ? 28 : settings.subtitleSize === 'medium' ? 36 : settings.subtitleSize === 'large' ? 44 : 52}px`,
+							backgroundColor: `${settings.subtitleBackgroundColor || '#000000'}${Math.round(((settings.subtitleBackground !== undefined ? settings.subtitleBackground : 75) / 100) * 255).toString(16).padStart(2, '0')}`,
+							color: settings.subtitleColor || '#ffffff',
+							textShadow: `0 0 ${settings.subtitleShadowBlur || 0.1}em ${settings.subtitleShadowColor || '#000000'}${Math.round(((settings.subtitleShadowOpacity !== undefined ? settings.subtitleShadowOpacity : 50) / 100) * 255).toString(16).padStart(2, '0')}`
 						}}
 						dangerouslySetInnerHTML={{
 							__html: currentSubtitleText
@@ -1173,6 +1203,17 @@ const Player = ({item, onEnded, onBack, onPlayNext, initialAudioIndex, initialSu
 								data-index={-1}
 								data-selected={selectedSubtitleIndex === -1 ? 'true' : undefined}
 								onClick={handleSelectSubtitle}
+								onKeyDown={(e) => {
+									if (e.keyCode === 39) { // Right -> Appearance
+										e.preventDefault();
+										e.stopPropagation();
+										Spotlight.focus('btn-subtitle-appearance');
+									} else if (e.keyCode === 37) { // Left -> Offset
+										e.preventDefault();
+										e.stopPropagation();
+										Spotlight.focus('btn-subtitle-offset');
+									}
+								}}
 							>
 								<span className={css.trackName}>Off</span>
 							</SpottableButton>
@@ -1183,13 +1224,28 @@ const Player = ({item, onEnded, onBack, onPlayNext, initialAudioIndex, initialSu
 									data-index={stream.index}
 									data-selected={stream.index === selectedSubtitleIndex ? 'true' : undefined}
 									onClick={handleSelectSubtitle}
+									onKeyDown={(e) => {
+										if (e.keyCode === 39) { // Right -> Appearance
+											e.preventDefault();
+											e.stopPropagation();
+											Spotlight.focus('btn-subtitle-appearance');
+										} else if (e.keyCode === 37) { // Left -> Offset
+											e.preventDefault();
+											e.stopPropagation();
+											Spotlight.focus('btn-subtitle-offset');
+										}
+									}}
 								>
 									<span className={css.trackName}>{stream.displayTitle}</span>
 									{stream.isForced && <span className={css.trackInfo}>Forced</span>}
 								</SpottableButton>
 							))}
 						</div>
-						<p className={css.modalFooter}>Press BACK to close</p>
+						<p className={css.modalFooter}>
+							<SpottableButton spotlightId="btn-subtitle-offset" className={css.actionBtn} onClick={() => openModal('subtitleOffset')}>Offset</SpottableButton>
+							<SpottableButton spotlightId="btn-subtitle-appearance" className={css.actionBtn} onClick={() => openModal('subtitleSettings')} style={{ marginLeft: 15 }}>Appearance</SpottableButton>
+						</p>
+						<p className={css.modalFooter} style={{ marginTop: 5, fontSize: 14, opacity: 0.5 }}>Press BACK to close</p>
 					</ModalContainer>
 				</div>
 			)}
@@ -1454,6 +1510,7 @@ const Player = ({item, onEnded, onBack, onPlayNext, initialAudioIndex, initialSu
 										</div>
 										<div className={css.infoRow}>
 											<span className={css.infoLabel}>Type</span>
+											{/* Subtitle Rendering */}
 											<span className={css.infoValue}>
 												{subtitleStream.IsExternal ? 'External' : 'Embedded'}
 											</span>
@@ -1466,6 +1523,20 @@ const Player = ({item, onEnded, onBack, onPlayNext, initialAudioIndex, initialSu
 					</div>
 				);
 			})()}
+
+			{/* Subtitle Offset Modal */}
+			<SubtitleOffsetOverlay
+				visible={activeModal === 'subtitleOffset'}
+				currentOffset={subtitleOffset}
+				onClose={closeModal}
+				onOffsetChange={handleSubtitleOffsetChange}
+			/>
+
+			{/* Subtitle Settings Modal */}
+			<SubtitleSettingsOverlay
+				visible={activeModal === 'subtitleSettings'}
+				onClose={closeModal}
+			/>
 		</div>
 	);
 };
