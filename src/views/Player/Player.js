@@ -688,13 +688,23 @@ const Player = ({item, onEnded, onBack, onPlayNext, initialAudioIndex, initialSu
 			setSubtitleUrl(null);
 			setSubtitleTrackEvents(null);
 			setCurrentSubtitleText(null);
+			avplaySetSilentSubtitle(true); // hide native subs when turning off
 		} else {
 			setSelectedSubtitleIndex(index);
 			const stream = subtitleStreams.find(s => s.index === index);
 			setSubtitleUrl(stream ? playback.getSubtitleUrl(stream) : null);
 
-			// Fetch subtitle data as JSON for custom rendering (Tizen doesn't support native <track>)
-			if (stream && stream.isTextBased) {
+			if (stream && stream.isEmbeddedNative) {
+				// Use AVPlay's native track selection for embedded SRT
+				const trackIndex = subtitleStreams.indexOf(stream);
+				if (trackIndex >= 0) {
+					avplaySelectTrack('SUBTITLE', trackIndex);
+					avplaySetSilentSubtitle(false);
+				}
+				setSubtitleTrackEvents(null);
+				setCurrentSubtitleText(null);
+			} else if (stream && stream.isTextBased) {
+				avplaySetSilentSubtitle(true); // hide native subs, use custom overlay
 				try {
 					const data = await playback.fetchSubtitleData(stream);
 					if (data && data.TrackEvents) {
@@ -710,6 +720,7 @@ const Player = ({item, onEnded, onBack, onPlayNext, initialAudioIndex, initialSu
 			} else {
 				// PGS/image-based subtitles - cannot render client-side, need burn-in via transcode
 				console.log('[Player] Image-based subtitle (codec:', stream?.codec, ') - requires burn-in via transcode');
+				avplaySetSilentSubtitle(true);
 				setSubtitleTrackEvents(null);
 			}
 			setCurrentSubtitleText(null);
