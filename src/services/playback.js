@@ -188,7 +188,8 @@ const extractSubtitleStreams = (mediaSource, credentials = null) => {
 				isForced: s.IsForced,
 				isDefault: s.IsDefault,
 				isTextBased,
-				isEmbeddedNative: false, // Always use server extraction
+				// Native embedded support for SRT to avoid extraction
+				isEmbeddedNative: !isExternal && (codec === 'srt' || codec === 'subrip'),
 				deliveryMethod,
 				deliveryUrl: deliveryMethod === 'External' && s.DeliveryUrl
 					? (s.DeliveryUrl.startsWith('http') ? s.DeliveryUrl : `${serverUrl}${s.DeliveryUrl}`)

@@ -5,7 +5,7 @@ import Spotlight from '@enact/spotlight';
 import Button from '@enact/sandstone/Button';
 import Scroller from '@enact/sandstone/Scroller';
 import * as playback from '../../services/playback';
-import {initTizenAPI, registerAppStateObserver, keepScreenOn, cleanupVideoElement} from '../../services/tizenVideo';
+import {initTizenAPI, registerAppStateObserver, keepScreenOn, cleanupVideoElement, avplaySelectTrack, avplaySetSilentSubtitle} from '../../services/tizenVideo';
 import {useSettings} from '../../context/SettingsContext';
 import {TIZEN_KEYS, isBackKey, isPlayPauseKey} from '../../utils/tizenKeys';
 import TrickplayPreview from '../../components/TrickplayPreview';
@@ -281,7 +281,16 @@ const Player = ({item, onEnded, onBack, onPlayNext, initialAudioIndex, initialSu
 				// On Tizen, we fetch subtitle data as JSON and render via custom overlay
 				// because native <track> elements don't work reliably with AVPlay
 				const loadSubtitleData = async (sub) => {
-					if (sub && sub.isTextBased) {
+					if (sub && sub.isEmbeddedNative) {
+						console.log('[Player] Initial: Using native embedded subtitle (codec:', sub.codec, ')');
+						const trackIndex = result.subtitleStreams ? result.subtitleStreams.indexOf(sub) : -1;
+						if (trackIndex >= 0) {
+							avplaySelectTrack('SUBTITLE', trackIndex);
+							avplaySetSilentSubtitle(false);
+						}
+						setSubtitleTrackEvents(null);
+					} else if (sub && sub.isTextBased) {
+						avplaySetSilentSubtitle(true);
 						try {
 							const data = await playback.fetchSubtitleData(sub);
 							if (data && data.TrackEvents) {
@@ -295,6 +304,7 @@ const Player = ({item, onEnded, onBack, onPlayNext, initialAudioIndex, initialSu
 							setSubtitleTrackEvents(null);
 						}
 					} else {
+						avplaySetSilentSubtitle(true);
 						setSubtitleTrackEvents(null);
 					}
 					setCurrentSubtitleText(null);
