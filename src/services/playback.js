@@ -448,12 +448,13 @@ export const getNextEpisode = async (item) => {
 	}
 };
 
-export const changeAudioStream = async (streamIndex) => {
+export const changeAudioStream = async (streamIndex, currentPositionTicks) => {
 	if (!currentSession) return null;
 
 	const newInfo = await getPlaybackInfo(currentSession.itemId, {
 		...currentSession,
-		audioStreamIndex: streamIndex
+		audioStreamIndex: streamIndex,
+		startPositionTicks: currentPositionTicks ?? currentSession.startPositionTicks
 	});
 
 	return newInfo;

@@ -658,17 +658,50 @@ const Player = ({item, onEnded, onBack, onPlayNext, initialAudioIndex, initialSu
 		setSelectedAudioIndex(index);
 		closeModal();
 
-		if (playMethod === playback.PlayMethod.Transcode) {
-			try {
-				const result = await playback.changeAudioStream(index);
-				if (result) {
-					setMediaUrl(result.url);
+		try {
+			// DirectPlay: try switching audio track natively via audioTracks API
+			// Samsung Tizen supports this for MKV/MP4 containers without reloading
+			if (playMethod !== playback.PlayMethod.Transcode && videoRef.current?.audioTracks?.length > 1) {
+				const audioTrackList = videoRef.current.audioTracks;
+				// Map Jellyfin stream indices to audioTracks positions
+				const audioStreamIndices = audioStreams.map(s => s.index);
+				const trackPosition = audioStreamIndices.indexOf(index);
+
+				if (trackPosition >= 0 && trackPosition < audioTrackList.length) {
+					for (let i = 0; i < audioTrackList.length; i++) {
+						audioTrackList[i].enabled = (i === trackPosition);
+					}
+					console.log('[Player] Switched audio track natively via audioTracks API, track position:', trackPosition);
+					return;
 				}
-			} catch (err) {
-				console.error('[Player] Failed to change audio:', err);
 			}
+
+			// Fallback: re-request playback info and reload video
+			const currentPositionTicks = videoRef.current
+				? Math.floor(videoRef.current.currentTime * 10000000)
+				: positionRef.current || 0;
+
+			const result = await playback.changeAudioStream(index, currentPositionTicks);
+			if (result) {
+				console.log('[Player] Switching audio track via stream reload for', playMethod, '- resuming from', currentPositionTicks);
+				positionRef.current = currentPositionTicks;
+
+				// For DirectPlay, the static URL may be identical so append a cache-buster
+				// to force the video element to reload with the new playback session
+				let newUrl = result.url;
+				if (result.playMethod === playback.PlayMethod.DirectPlay) {
+					const separator = newUrl.includes('?') ? '&' : '?';
+					newUrl = `${newUrl}${separator}_audioSwitch=${Date.now()}`;
+				}
+
+				setMediaUrl(newUrl);
+				if (result.playMethod) setPlayMethod(result.playMethod);
+				if (result.mimeType) setMimeType(result.mimeType);
+			}
+		} catch (err) {
+			console.error('[Player] Failed to change audio:', err);
 		}
-	}, [playMethod, closeModal]);
+	}, [playMethod, closeModal, audioStreams]);
 
 	const handleSelectSubtitle = useCallback(async (e) => {
 		const index = parseInt(e.currentTarget.dataset.index, 10);
