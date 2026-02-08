@@ -1016,7 +1016,7 @@ const Player = ({item, onEnded, onBack, onPlayNext, initialAudioIndex, initialSu
 					style={{
 						bottom: settings.subtitlePosition === 'absolute'
 							? `${100 - settings.subtitlePositionAbsolute}%`
-							: `${settings.subtitlePosition === 'bottom' ? 10 : settings.subtitlePosition === 'lower' ? 15 : settings.subtitlePosition === 'middle' ? 25 : 35}%`,
+							: `${settings.subtitlePosition === 'bottom' ? 10 : settings.subtitlePosition === 'lower' ? 20 : settings.subtitlePosition === 'middle' ? 30 : 40}%`,
 						opacity: (settings.subtitleOpacity || 100) / 100
 					}}
 				>
