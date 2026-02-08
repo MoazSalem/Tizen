@@ -1,9 +1,16 @@
-import React, { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Spotlight } from '@enact/spotlight';
 import Spottable from '@enact/spotlight/Spottable';
 import Scroller from '@enact/sandstone/Scroller';
 import Slider from '@enact/sandstone/Slider';
 import { useSettings } from '../../context/SettingsContext';
+import {
+    SUBTITLE_SIZE_OPTIONS,
+    SUBTITLE_COLOR_OPTIONS,
+    SUBTITLE_POSITION_OPTIONS,
+    SUBTITLE_SHADOW_COLOR_OPTIONS,
+    SUBTITLE_BACKGROUND_COLOR_OPTIONS
+} from '../../utils/subtitleConstants';
 import css from './Player.module.less';
 
 const SpottableButton = Spottable('button');
@@ -11,84 +18,9 @@ const SpottableButton = Spottable('button');
 const SubtitleSettingsOverlay = ({ visible, onClose }) => {
     const { settings, updateSetting } = useSettings();
 
-    const SUBTITLE_SIZE_OPTIONS = [
-        { value: 'small', label: 'Small' },
-        { value: 'medium', label: 'Medium' },
-        { value: 'large', label: 'Large' },
-        { value: 'xlarge', label: 'Extra Large' }
-    ];
-
-    const SUBTITLE_POSITION_OPTIONS = [
-        { value: 'bottom', label: 'Bottom' },
-        { value: 'lower', label: 'Lower' },
-        { value: 'middle', label: 'Middle' },
-        { value: 'higher', label: 'Higher' },
-        { value: 'absolute', label: 'Absolute' }
-    ];
-
-    const SUBTITLE_OPACITY_OPTIONS = [
-        { value: 100, label: '100%' },
-        { value: 90, label: '90%' },
-        { value: 80, label: '80%' },
-        { value: 70, label: '70%' },
-        { value: 60, label: '60%' },
-        { value: 50, label: '50%' },
-        { value: 25, label: '25%' }
-    ];
-
-    const SUBTITLE_BACKGROUND_OPTIONS = [
-        { value: 0, label: 'None' },
-        { value: 25, label: 'Light (25%)' },
-        { value: 50, label: 'Medium (50%)' },
-        { value: 75, label: 'Dark (75%)' },
-        { value: 90, label: 'Very Dark (90%)' },
-        { value: 100, label: 'Solid Black' }
-    ];
-
-    const SUBTITLE_COLOR_OPTIONS = [
-        { value: '#ffffff', label: 'White' },
-        { value: '#ffff00', label: 'Yellow' },
-        { value: '#00ffff', label: 'Cyan' },
-        { value: '#ff00ff', label: 'Magenta' },
-        { value: '#00ff00', label: 'Green' },
-        { value: '#ff0000', label: 'Red' },
-        { value: '#808080', label: 'Grey' },
-        { value: '#404040', label: 'Dark Grey' }
-    ];
-
-
-
-    const SUBTITLE_SHADOW_COLOR_OPTIONS = [
-        { value: '#000000', label: 'Black' },
-        { value: '#ffffff', label: 'White' },
-        { value: '#808080', label: 'Grey' },
-        { value: '#404040', label: 'Dark Grey' },
-        { value: '#ff0000', label: 'Red' },
-        { value: '#00ff00', label: 'Green' },
-        { value: '#0000ff', label: 'Blue' }
-    ];
-
-    const SUBTITLE_BACKGROUND_COLOR_OPTIONS = [
-        { value: '#000000', label: 'Black' },
-        { value: '#ffffff', label: 'White' },
-        { value: '#808080', label: 'Grey' },
-        { value: '#404040', label: 'Dark Grey' },
-        { value: '#000080', label: 'Navy' }
-    ];
-
-    const SUBTITLE_ABSOLUTE_POSITION_OPTIONS = [
-        { value: 95, label: '95% (Bottom)' },
-        { value: 90, label: '90%' },
-        { value: 85, label: '85%' },
-        { value: 80, label: '80%' },
-        { value: 70, label: '70%' },
-        { value: 50, label: '50% (Middle)' },
-        { value: 20, label: '20% (Top)' }
-    ];
-
     const cycleOption = useCallback((key, options) => {
-        const currentLimit = options.findIndex(o => o.value === settings[key]);
-        const nextIndex = (currentLimit + 1) % options.length;
+        const currentIndex = options.findIndex(o => o.value === settings[key]);
+        const nextIndex = (currentIndex + 1) % options.length;
         updateSetting(key, options[nextIndex].value);
     }, [settings, updateSetting]);
 
@@ -98,7 +30,7 @@ const SubtitleSettingsOverlay = ({ visible, onClose }) => {
     };
 
     // Set initial focus when opening
-    React.useEffect(() => {
+    useEffect(() => {
         if (visible) {
             setTimeout(() => {
                 Spotlight.focus('subtitle-settings-size');
@@ -119,7 +51,6 @@ const SubtitleSettingsOverlay = ({ visible, onClose }) => {
                 <h2 className={css.modalTitle}>Subtitle Appearance</h2>
 
                 <Scroller
-                    className={css.settingsScroller}
                     horizontalScrollbar="hidden"
                     verticalScrollbar="visible"
                     style={{ flex: 1, minHeight: 0 }}

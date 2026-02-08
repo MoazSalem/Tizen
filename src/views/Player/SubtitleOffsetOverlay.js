@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Spotlight } from '@enact/spotlight';
 import Spottable from '@enact/spotlight/Spottable';
 import css from './Player.module.less';
@@ -63,7 +63,7 @@ const SubtitleOffsetOverlay = ({ visible, currentOffset, onClose, onOffsetChange
                     </SpottableButton>
 
                     <div className={css.offsetDisplay}>
-                        <span className={css.offsetValue}>{(offset > 0 ? '+' : '') + offset.toFixed(1)}s</span>
+                        {(offset > 0 ? '+' : '') + offset.toFixed(1)}s
                     </div>
 
                     <SpottableButton

@@ -193,7 +193,7 @@ export const warning = (category, message, context) => log(LOG_LEVELS.WARNING, c
 export const error = (category, message, context) => log(LOG_LEVELS.ERROR, category, message, context);
 export const fatal = (category, message, context) => log(LOG_LEVELS.FATAL, category, message, context);
 
-export { LOG_LEVELS, LOG_CATEGORIES };
+export {LOG_LEVELS, LOG_CATEGORIES};
 
 export default {
 	enableServerLogging,

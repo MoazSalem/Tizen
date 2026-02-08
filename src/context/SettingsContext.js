@@ -1,12 +1,12 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { getFromStorage, saveToStorage } from '../services/storage';
+import {createContext, useContext, useState, useEffect, useCallback} from 'react';
+import {getFromStorage, saveToStorage} from '../services/storage';
 
 const DEFAULT_HOME_ROWS = [
-	{ id: 'resume', name: 'Continue Watching', enabled: true, order: 0 },
-	{ id: 'nextup', name: 'Next Up', enabled: true, order: 1 },
-	{ id: 'latest-media', name: 'Latest Media', enabled: true, order: 2 },
-	{ id: 'collections', name: 'Collections', enabled: false, order: 3 },
-	{ id: 'library-tiles', name: 'My Media', enabled: false, order: 4 }
+	{id: 'resume', name: 'Continue Watching', enabled: true, order: 0},
+	{id: 'nextup', name: 'Next Up', enabled: true, order: 1},
+	{id: 'latest-media', name: 'Latest Media', enabled: true, order: 2},
+	{id: 'collections', name: 'Collections', enabled: false, order: 3},
+	{id: 'library-tiles', name: 'My Media', enabled: false, order: 4}
 ];
 
 const defaultSettings = {
@@ -47,18 +47,18 @@ const defaultSettings = {
 	unifiedLibraryMode: false
 };
 
-export { DEFAULT_HOME_ROWS };
+export {DEFAULT_HOME_ROWS};
 
 const SettingsContext = createContext(null);
 
-export function SettingsProvider({ children }) {
+export function SettingsProvider({children}) {
 	const [settings, setSettings] = useState(defaultSettings);
 	const [loaded, setLoaded] = useState(false);
 
 	useEffect(() => {
 		getFromStorage('settings').then((stored) => {
 			if (stored) {
-				setSettings({ ...defaultSettings, ...stored });
+				setSettings({...defaultSettings, ...stored});
 			}
 			setLoaded(true);
 		});
@@ -66,7 +66,7 @@ export function SettingsProvider({ children }) {
 
 	const updateSetting = useCallback((key, value) => {
 		setSettings(prev => {
-			const updated = { ...prev, [key]: value };
+			const updated = {...prev, [key]: value};
 			saveToStorage('settings', updated);
 			return updated;
 		});
@@ -74,7 +74,7 @@ export function SettingsProvider({ children }) {
 
 	const updateSettings = useCallback((newSettings) => {
 		setSettings(prev => {
-			const updated = { ...prev, ...newSettings };
+			const updated = {...prev, ...newSettings};
 			saveToStorage('settings', updated);
 			return updated;
 		});

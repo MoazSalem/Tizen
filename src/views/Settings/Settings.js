@@ -1,17 +1,17 @@
-import { useCallback, useState, useEffect } from 'react';
+import {useCallback, useState, useEffect} from 'react';
 import Spottable from '@enact/spotlight/Spottable';
 import SpotlightContainerDecorator from '@enact/spotlight/SpotlightContainerDecorator';
 import Spotlight from '@enact/spotlight';
 import Popup from '@enact/sandstone/Popup';
 import Button from '@enact/sandstone/Button';
 import Slider from '@enact/sandstone/Slider';
-import { useAuth } from '../../context/AuthContext';
-import { useSettings, DEFAULT_HOME_ROWS } from '../../context/SettingsContext';
-import { useJellyseerr } from '../../context/JellyseerrContext';
-import { useDeviceInfo } from '../../hooks/useDeviceInfo';
+import {useAuth} from '../../context/AuthContext';
+import {useSettings, DEFAULT_HOME_ROWS} from '../../context/SettingsContext';
+import {useJellyseerr} from '../../context/JellyseerrContext';
+import {useDeviceInfo} from '../../hooks/useDeviceInfo';
 import JellyseerrIcon from '../../components/icons/JellyseerrIcon';
 import serverLogger from '../../services/serverLogger';
-import { isBackKey } from '../../utils/tizenKeys';
+import {isBackKey} from '../../utils/tizenKeys';
 
 import css from './Settings.module.less';
 
@@ -19,8 +19,8 @@ const SpottableDiv = Spottable('div');
 const SpottableButton = Spottable('button');
 const SpottableInput = Spottable('input');
 
-const SidebarContainer = SpotlightContainerDecorator({ enterTo: 'last-focused' }, 'div');
-const ContentContainer = SpotlightContainerDecorator({ enterTo: 'last-focused' }, 'div');
+const SidebarContainer = SpotlightContainerDecorator({enterTo: 'last-focused'}, 'div');
+const ContentContainer = SpotlightContainerDecorator({enterTo: 'last-focused'}, 'div');
 
 const IconGeneral = () => (
 	<svg viewBox="0 0 24 24" fill="currentColor">
@@ -53,50 +53,50 @@ const IconAbout = () => (
 );
 
 const CATEGORIES = [
-	{ id: 'general', label: 'General', Icon: IconGeneral },
-	{ id: 'playback', label: 'Playback', Icon: IconPlayback },
-	{ id: 'display', label: 'Display', Icon: IconDisplay },
-	{ id: 'jellyseerr', label: 'Jellyseerr', Icon: JellyseerrIcon },
-	{ id: 'account', label: 'Account', Icon: IconAccount },
-	{ id: 'about', label: 'About', Icon: IconAbout }
+	{id: 'general', label: 'General', Icon: IconGeneral},
+	{id: 'playback', label: 'Playback', Icon: IconPlayback},
+	{id: 'display', label: 'Display', Icon: IconDisplay},
+	{id: 'jellyseerr', label: 'Jellyseerr', Icon: JellyseerrIcon},
+	{id: 'account', label: 'Account', Icon: IconAccount},
+	{id: 'about', label: 'About', Icon: IconAbout}
 ];
 
 const BITRATE_OPTIONS = [
-	{ value: 0, label: 'Auto (No limit)' },
-	{ value: 120000000, label: '120 Mbps' },
-	{ value: 80000000, label: '80 Mbps' },
-	{ value: 60000000, label: '60 Mbps' },
-	{ value: 40000000, label: '40 Mbps' },
-	{ value: 20000000, label: '20 Mbps' },
-	{ value: 10000000, label: '10 Mbps' },
-	{ value: 5000000, label: '5 Mbps' }
+	{value: 0, label: 'Auto (No limit)'},
+	{value: 120000000, label: '120 Mbps'},
+	{value: 80000000, label: '80 Mbps'},
+	{value: 60000000, label: '60 Mbps'},
+	{value: 40000000, label: '40 Mbps'},
+	{value: 20000000, label: '20 Mbps'},
+	{value: 10000000, label: '10 Mbps'},
+	{value: 5000000, label: '5 Mbps'}
 ];
 
 const CONTENT_TYPE_OPTIONS = [
-	{ value: 'both', label: 'Movies & TV Shows' },
-	{ value: 'movies', label: 'Movies Only' },
-	{ value: 'tv', label: 'TV Shows Only' }
+	{value: 'both', label: 'Movies & TV Shows'},
+	{value: 'movies', label: 'Movies Only'},
+	{value: 'tv', label: 'TV Shows Only'}
 ];
 
 const FEATURED_ITEM_COUNT_OPTIONS = [
-	{ value: 5, label: '5 items' },
-	{ value: 10, label: '10 items' },
-	{ value: 15, label: '15 items' }
+	{value: 5, label: '5 items'},
+	{value: 10, label: '10 items'},
+	{value: 15, label: '15 items'}
 ];
 
 const BLUR_OPTIONS = [
-	{ value: 0, label: 'Off' },
-	{ value: 10, label: 'Light' },
-	{ value: 20, label: 'Medium' },
-	{ value: 30, label: 'Strong' },
-	{ value: 40, label: 'Heavy' }
+	{value: 0, label: 'Off'},
+	{value: 10, label: 'Light'},
+	{value: 20, label: 'Medium'},
+	{value: 30, label: 'Strong'},
+	{value: 40, label: 'Heavy'}
 ];
 
 const SUBTITLE_SIZE_OPTIONS = [
-	{ value: 'small', label: 'Small', fontSize: 28 },
-	{ value: 'medium', label: 'Medium', fontSize: 36 },
-	{ value: 'large', label: 'Large', fontSize: 44 },
-	{ value: 'xlarge', label: 'Extra Large', fontSize: 52 }
+	{value: 'small', label: 'Small', fontSize: 28},
+	{value: 'medium', label: 'Medium', fontSize: 36},
+	{value: 'large', label: 'Large', fontSize: 44},
+	{value: 'xlarge', label: 'Extra Large', fontSize: 52}
 ];
 
 const SUBTITLE_BACKGROUND_OPTIONS = [
@@ -122,9 +122,9 @@ const SUBTITLE_COLOR_OPTIONS = [
 ];
 
 const SUBTITLE_POSITION_OPTIONS = [
-	{ value: 'bottom', label: 'Bottom', offset: 10 },
-	{ value: 'lower', label: 'Lower', offset: 15 },
-	{ value: 'middle', label: 'Middle', offset: 25 },
+	{value: 'bottom', label: 'Bottom', offset: 10},
+	{value: 'lower', label: 'Lower', offset: 15},
+	{value: 'middle', label: 'Middle', offset: 25},
 	{ value: 'higher', label: 'Higher', offset: 35 },
 	{ value: 'absolute', label: 'Absolute', offset: 0 }
 ];
@@ -168,39 +168,39 @@ const SUBTITLE_ABSOLUTE_POSITION_OPTIONS = [
 ];
 
 const SEEK_STEP_OPTIONS = [
-	{ value: 5, label: '5 seconds' },
-	{ value: 10, label: '10 seconds' },
-	{ value: 20, label: '20 seconds' },
-	{ value: 30, label: '30 seconds' }
+	{value: 5, label: '5 seconds'},
+	{value: 10, label: '10 seconds'},
+	{value: 20, label: '20 seconds'},
+	{value: 30, label: '30 seconds'}
 ];
 
 const UI_OPACITY_OPTIONS = [
-	{ value: 50, label: '50%' },
-	{ value: 65, label: '65%' },
-	{ value: 75, label: '75%' },
-	{ value: 85, label: '85%' },
-	{ value: 95, label: '95%' }
+	{value: 50, label: '50%'},
+	{value: 65, label: '65%'},
+	{value: 75, label: '75%'},
+	{value: 85, label: '85%'},
+	{value: 95, label: '95%'}
 ];
 
 const UI_COLOR_OPTIONS = [
-	{ value: 'dark', label: 'Dark Gray', rgb: '40, 40, 40' },
-	{ value: 'black', label: 'Black', rgb: '0, 0, 0' },
-	{ value: 'charcoal', label: 'Charcoal', rgb: '54, 54, 54' },
-	{ value: 'slate', label: 'Slate', rgb: '47, 54, 64' },
-	{ value: 'navy', label: 'Navy', rgb: '20, 30, 48' },
-	{ value: 'midnight', label: 'Midnight Blue', rgb: '25, 25, 65' },
-	{ value: 'ocean', label: 'Ocean', rgb: '20, 50, 70' },
-	{ value: 'teal', label: 'Teal', rgb: '0, 60, 60' },
-	{ value: 'forest', label: 'Forest', rgb: '25, 50, 35' },
-	{ value: 'olive', label: 'Olive', rgb: '50, 50, 25' },
-	{ value: 'purple', label: 'Purple', rgb: '48, 25, 52' },
-	{ value: 'plum', label: 'Plum', rgb: '60, 30, 60' },
-	{ value: 'wine', label: 'Wine', rgb: '60, 20, 30' },
-	{ value: 'maroon', label: 'Maroon', rgb: '50, 20, 20' },
-	{ value: 'brown', label: 'Brown', rgb: '50, 35, 25' }
+	{value: 'dark', label: 'Dark Gray', rgb: '40, 40, 40'},
+	{value: 'black', label: 'Black', rgb: '0, 0, 0'},
+	{value: 'charcoal', label: 'Charcoal', rgb: '54, 54, 54'},
+	{value: 'slate', label: 'Slate', rgb: '47, 54, 64'},
+	{value: 'navy', label: 'Navy', rgb: '20, 30, 48'},
+	{value: 'midnight', label: 'Midnight Blue', rgb: '25, 25, 65'},
+	{value: 'ocean', label: 'Ocean', rgb: '20, 50, 70'},
+	{value: 'teal', label: 'Teal', rgb: '0, 60, 60'},
+	{value: 'forest', label: 'Forest', rgb: '25, 50, 35'},
+	{value: 'olive', label: 'Olive', rgb: '50, 50, 25'},
+	{value: 'purple', label: 'Purple', rgb: '48, 25, 52'},
+	{value: 'plum', label: 'Plum', rgb: '60, 30, 60'},
+	{value: 'wine', label: 'Wine', rgb: '60, 20, 30'},
+	{value: 'maroon', label: 'Maroon', rgb: '50, 20, 20'},
+	{value: 'brown', label: 'Brown', rgb: '50, 35, 25'}
 ];
 
-const Settings = ({ onBack, onLogout, onAddServer, onAddUser }) => {
+const Settings = ({onBack, onLogout, onAddServer, onAddUser}) => {
 	const {
 		user,
 		serverUrl,
@@ -216,8 +216,8 @@ const Settings = ({ onBack, onLogout, onAddServer, onAddUser }) => {
 		hasMultipleServers,
 		startAddServerFlow
 	} = useAuth();
-	const { settings, updateSetting } = useSettings();
-	const { capabilities } = useDeviceInfo();
+	const {settings, updateSetting} = useSettings();
+	const {capabilities} = useDeviceInfo();
 	const jellyseerr = useJellyseerr();
 
 	const [activeCategory, setActiveCategory] = useState('general');
@@ -268,7 +268,7 @@ const Settings = ({ onBack, onLogout, onAddServer, onAddUser }) => {
 						setServerVersion(data.Version);
 					}
 				})
-				.catch(() => { });
+				.catch(() => {});
 		}
 	}, [serverUrl, accessToken]);
 
@@ -339,7 +339,7 @@ const Settings = ({ onBack, onLogout, onAddServer, onAddUser }) => {
 		const username = e.currentTarget.dataset.username;
 		const userServerName = e.currentTarget.dataset.serverName;
 		if (serverId && userId) {
-			setServerToRemove({ serverId, userId, username, serverName: userServerName });
+			setServerToRemove({serverId, userId, username, serverName: userServerName});
 			setShowConfirmRemoveModal(true);
 		}
 	}, []);
@@ -496,7 +496,7 @@ const Settings = ({ onBack, onLogout, onAddServer, onAddUser }) => {
 
 	const toggleHomeRow = useCallback((rowId) => {
 		setTempHomeRows(prev => prev.map(row =>
-			row.id === rowId ? { ...row, enabled: !row.enabled } : row
+			row.id === rowId ? {...row, enabled: !row.enabled} : row
 		));
 	}, []);
 
